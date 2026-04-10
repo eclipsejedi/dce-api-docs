@@ -13,13 +13,10 @@ servers:
     description: Staging
 components:
   securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: API Key
-      description: >-
-        Send your API key in the Authorization header using the Bearer scheme:
-        `Authorization: Bearer <API key>`.
+    Authorization:
+      type: apiKey
+      in: header
+      name: Authorization
 paths:
   /api/balance:
     get:
@@ -28,8 +25,6 @@ paths:
       tags:
         - Partner
       x-visibility: partner
-      security:
-        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -48,8 +43,6 @@ paths:
       tags:
         - Partner
       x-visibility: partner
-      security:
-        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -67,8 +60,6 @@ paths:
       tags:
         - Partner
       x-visibility: partner
-      security:
-        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -87,8 +78,6 @@ paths:
       tags:
         - Partner
       x-visibility: partner
-      security:
-        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -107,8 +96,6 @@ paths:
       tags:
         - Partner
       x-visibility: partner
-      security:
-        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -126,8 +113,6 @@ paths:
       tags:
         - Partner
       x-visibility: partner
-      security:
-        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -146,8 +131,6 @@ paths:
       tags:
         - Partner
       x-visibility: partner
-      security:
-        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -166,8 +149,6 @@ paths:
       tags:
         - Partner
       x-visibility: partner
-      security:
-        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -186,8 +167,6 @@ paths:
       tags:
         - Partner
       x-visibility: partner
-      security:
-        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -205,8 +184,6 @@ paths:
       tags:
         - Partner
       x-visibility: partner
-      security:
-        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -218,3 +195,4 @@ paths:
           description: Forbidden
         '500':
           description: Internal server error
+x-readme: {}
