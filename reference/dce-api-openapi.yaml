@@ -2,18 +2,21 @@ openapi: 3.0.3
 info:
   title: DCE API
   version: 1.0.0
-  description: Merchant-facing API reference for dce services
+  description: >-
+    Merchant-facing API reference for dce services. Authentication uses the
+    Authorization header with a bearer API key. You must obtain an API key
+    before calling these APIs.
 servers:
   - url: https://api.dcepay.io
-    description: Local
-  - url: https://api.dce.com
     description: Production
+  - url: https://staging.dcepay.io
+    description: Staging
 components:
   securitySchemes:
-    Authorization:
-      type: apiKey
-      in: header
-      name: Authorization
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API Key
 paths:
   /api/balance:
     get:
@@ -22,6 +25,8 @@ paths:
       tags:
         - Partner
       x-visibility: partner
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -40,6 +45,8 @@ paths:
       tags:
         - Partner
       x-visibility: partner
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -57,6 +64,8 @@ paths:
       tags:
         - Partner
       x-visibility: partner
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -75,6 +84,8 @@ paths:
       tags:
         - Partner
       x-visibility: partner
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -93,6 +104,8 @@ paths:
       tags:
         - Partner
       x-visibility: partner
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -110,6 +123,8 @@ paths:
       tags:
         - Partner
       x-visibility: partner
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -128,6 +143,8 @@ paths:
       tags:
         - Partner
       x-visibility: partner
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -146,6 +163,8 @@ paths:
       tags:
         - Partner
       x-visibility: partner
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -164,6 +183,8 @@ paths:
       tags:
         - Partner
       x-visibility: partner
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -181,6 +202,8 @@ paths:
       tags:
         - Partner
       x-visibility: partner
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -192,4 +215,3 @@ paths:
           description: Forbidden
         '500':
           description: Internal server error
-x-readme: {}
