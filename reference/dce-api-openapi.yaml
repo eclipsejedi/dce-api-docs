@@ -13,7 +13,7 @@ servers:
     description: Staging
 components:
   securitySchemes:
-    BearerAuth:
+    Authorization:
       type: http
       scheme: bearer
       bearerFormat: API Key
@@ -26,7 +26,7 @@ paths:
         - Partner
       x-visibility: partner
       security:
-        - BearerAuth: []
+        - Authorization: []
       responses:
         '200':
           description: Success
@@ -46,7 +46,7 @@ paths:
         - Partner
       x-visibility: partner
       security:
-        - BearerAuth: []
+        - Authorization: []
       responses:
         '200':
           description: Success
@@ -65,7 +65,7 @@ paths:
         - Partner
       x-visibility: partner
       security:
-        - BearerAuth: []
+        - Authorization: []
       responses:
         '200':
           description: Success
@@ -85,7 +85,7 @@ paths:
         - Partner
       x-visibility: partner
       security:
-        - BearerAuth: []
+        - Authorization: []
       responses:
         '200':
           description: Success
@@ -105,7 +105,7 @@ paths:
         - Partner
       x-visibility: partner
       security:
-        - BearerAuth: []
+        - Authorization: []
       responses:
         '200':
           description: Success
@@ -124,7 +124,7 @@ paths:
         - Partner
       x-visibility: partner
       security:
-        - BearerAuth: []
+        - Authorization: []
       responses:
         '200':
           description: Success
@@ -144,7 +144,7 @@ paths:
         - Partner
       x-visibility: partner
       security:
-        - BearerAuth: []
+        - Authorization: []
       responses:
         '200':
           description: Success
@@ -164,7 +164,7 @@ paths:
         - Partner
       x-visibility: partner
       security:
-        - BearerAuth: []
+        - Authorization: []
       responses:
         '200':
           description: Success
@@ -184,7 +184,7 @@ paths:
         - Partner
       x-visibility: partner
       security:
-        - BearerAuth: []
+        - Authorization: []
       responses:
         '200':
           description: Success
@@ -203,7 +203,7 @@ paths:
         - Partner
       x-visibility: partner
       security:
-        - BearerAuth: []
+        - Authorization: []
       responses:
         '200':
           description: Success
