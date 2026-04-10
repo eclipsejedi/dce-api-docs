@@ -3,9 +3,9 @@ info:
   title: DCE API
   version: 1.0.0
   description: >-
-    Merchant-facing API reference for dce services. Authentication uses the
-    Authorization header with a bearer API key. You must obtain an API key
-    before calling these APIs.
+    Merchant-facing API reference for dce services. Authenticate with
+    `Authorization: Bearer <API key>`. Obtain an API key before calling these
+    APIs.
 servers:
   - url: https://api.dcepay.io
     description: Production
@@ -13,10 +13,13 @@ servers:
     description: Staging
 components:
   securitySchemes:
-    Authorization:
+    BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: API Key
+      description: >-
+        Send your API key in the Authorization header using the Bearer scheme:
+        `Authorization: Bearer <API key>`.
 paths:
   /api/balance:
     get:
@@ -26,7 +29,7 @@ paths:
         - Partner
       x-visibility: partner
       security:
-        - Authorization: []
+        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -46,7 +49,7 @@ paths:
         - Partner
       x-visibility: partner
       security:
-        - Authorization: []
+        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -65,7 +68,7 @@ paths:
         - Partner
       x-visibility: partner
       security:
-        - Authorization: []
+        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -85,7 +88,7 @@ paths:
         - Partner
       x-visibility: partner
       security:
-        - Authorization: []
+        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -105,7 +108,7 @@ paths:
         - Partner
       x-visibility: partner
       security:
-        - Authorization: []
+        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -124,7 +127,7 @@ paths:
         - Partner
       x-visibility: partner
       security:
-        - Authorization: []
+        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -144,7 +147,7 @@ paths:
         - Partner
       x-visibility: partner
       security:
-        - Authorization: []
+        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -164,7 +167,7 @@ paths:
         - Partner
       x-visibility: partner
       security:
-        - Authorization: []
+        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -184,7 +187,7 @@ paths:
         - Partner
       x-visibility: partner
       security:
-        - Authorization: []
+        - BearerAuth: []
       responses:
         '200':
           description: Success
@@ -203,7 +206,7 @@ paths:
         - Partner
       x-visibility: partner
       security:
-        - Authorization: []
+        - BearerAuth: []
       responses:
         '200':
           description: Success
