@@ -36,6 +36,8 @@ paths:
           description: Forbidden
         '500':
           description: Internal server error
+      security:
+        - Authorization: []
   /api/deposit-address:
     get:
       operationId: get_api_deposit_address
