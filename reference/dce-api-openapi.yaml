@@ -1,0 +1,214 @@
+openapi: 3.0.3
+info:
+  title: DCE API
+  version: 1.0.0
+  description: Merchant-facing API reference for dce services
+servers:
+  - url: http://localhost:8000
+    description: Local
+  - url: https://api.dce.com
+    description: Production
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API Key
+paths:
+  /api/balance:
+    get:
+      operationId: get_api_balance
+      summary: GET /api/balance
+      tags:
+        - Partner
+      x-visibility: partner
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+  /api/deposit-address:
+    get:
+      operationId: get_api_deposit_address
+      summary: GET /api/deposit-address
+      tags:
+        - Partner
+      x-visibility: partner
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+    post:
+      operationId: post_api_deposit_address
+      summary: POST /api/deposit-address
+      tags:
+        - Partner
+      x-visibility: partner
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+  /api/deposit-page:
+    get:
+      operationId: get_api_deposit_page
+      summary: GET /api/deposit-page
+      tags:
+        - Partner
+      x-visibility: partner
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+  /api/deposit-url:
+    post:
+      operationId: post_api_deposit_url
+      summary: POST /api/deposit-url
+      tags:
+        - Partner
+      x-visibility: partner
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+    get:
+      operationId: get_api_deposit_url
+      summary: GET /api/deposit-url
+      tags:
+        - Partner
+      x-visibility: partner
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+  /api/exchange-rates:
+    get:
+      operationId: get_api_exchange_rates
+      summary: GET /api/exchange-rates
+      tags:
+        - Partner
+      x-visibility: partner
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+  /api/transactions:
+    get:
+      operationId: get_api_transactions
+      summary: GET /api/transactions
+      tags:
+        - Partner
+      x-visibility: partner
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+  /api/withdrawals:
+    post:
+      operationId: post_api_withdrawals
+      summary: POST /api/withdrawals
+      tags:
+        - Partner
+      x-visibility: partner
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+    get:
+      operationId: get_api_withdrawals
+      summary: GET /api/withdrawals
+      tags:
+        - Partner
+      x-visibility: partner
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
