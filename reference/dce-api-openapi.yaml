@@ -3,198 +3,434 @@ info:
   title: DCE API
   version: 1.0.0
   description: >-
-    Merchant-facing API reference for dce services. Authenticate with
-    `Authorization: Bearer <API key>`. Obtain an API key before calling these
-    APIs.
+    **DCE API** — Next.js service for merchant cryptocurrency operations:
+    balances, deposits, deposit sessions, exchange rates, transaction history,
+    withdrawals (with configurable fees), settlements, and internal webhook
+    event tooling where exposed.
+
+
+    **Authentication:** send the API key in the `Authorization` header on all
+    routes except `GET /api/deposit-page` (use the raw key; `Bearer` prefix is
+    optional). The deposit page uses a `token` query parameter from the
+    deposit-session flow.
+
+
+    **Networks** (request body `network` where applicable): `ETH`, `TRX`, `SEP`,
+    `TRX_SHASTA`, `BNB`, `tBNB` (see Prisma `NetworkSymbol`).
+
+
+    **Amounts:** request and response monetary fields are often decimal
+    **strings** to preserve precision. Merchant-linked users may require an
+    **ACTIVE** `merchantProfile` for deposit creation.
+
+
+    **Errors:** validation issues typically return **400** with JSON `details`;
+    auth failures **401**; insufficient balance on withdrawals **400** with
+    balance/fee hints.
+
+
+    **This export:** partner/merchant routes only (suitable for public ReadMe).
 servers:
   - url: https://api.dcepay.io
     description: Production
   - url: https://staging.dcepay.io
     description: Staging
+tags:
+  - name: Partner
+    description: >-
+      Merchant-facing integration: balances, deposit addresses and hosted
+      deposit links, exchange rates, transactions, withdrawals. Most routes send
+      the API key in `Authorization` (raw key; Bearer optional). `GET
+      /api/deposit-page` is a public session endpoint and uses a `token` query
+      parameter instead.
+  - name: Internal
+    description: >-
+      Operator and system routes: users, wallets, deposits, settlements,
+      reconciliation, webhooks, merchant configuration, and admin APIs.
+  - name: Balances
+    description: >-
+      Per-currency available and pending balances for the authenticated merchant
+      user (`BalanceService`).
+  - name: Deposits
+    description: >-
+      Deposit addresses (`NetworkSymbol`: ETH, TRX, SEP, TRX_SHASTA, BNB, tBNB),
+      deposit URLs, and single-use deposit page tokens.
+  - name: Payouts
+    description: >-
+      Withdrawals with configurable fees (`WithdrawalFeeService`), balance
+      reservation, and payout processing.
+  - name: Rates
+    description: Exchange rates for a requested base currency.
+  - name: Transactions
+    description: >-
+      Unified transaction history with pagination and optional filters; ties
+      deposits, withdrawals, and webhook metadata.
+  - name: Users
+    description: Platform and merchant-scoped user records.
+  - name: Wallets
+    description: Per-user chain wallets and balance sync.
+  - name: Settlements
+    description: Settlement batches and approval workflow.
+  - name: Reconciliation
+    description: Reconciliation jobs and status.
+  - name: Merchants
+    description: Merchant fee config and settlement addresses.
+  - name: Webhooks
+    description: >-
+      Internal webhook event listing and processing (`/api/webhook/event`);
+      operator tooling only.
+  - name: Admin
+    description: System settings and background job administration.
 components:
   securitySchemes:
-    Authorization:
+    ApiKeyAuth:
       type: apiKey
       in: header
       name: Authorization
+      description: >-
+        DCE merchant or operator API key. Send as the full `Authorization`
+        header value using the raw key (no `Bearer` prefix required). `Bearer
+        <API key>` is also accepted. Does not apply to `GET /api/deposit-page`
+        (session `token` query parameter).
 paths:
   /api/balance:
     get:
       operationId: get_api_balance
-      summary: GET /api/balance
+      summary: Get balance for a currency
+      description: >-
+        Returns the authenticated merchant user’s balance for a single
+        fiat/crypto currency.
+
+
+        **Query:** `currency` (required) — 3–4 character currency code (for
+        example `USD`, `USDT`).
+
+
+        **Response:** `currency`, `available` and `pending` as decimal strings,
+        plus `lastUpdatedAt` when a balance row exists; otherwise zero balances
+        for that currency.
+
+
+        **Authentication:** `Authorization: <API key>` — send the raw key (no
+        `Bearer` prefix required). `Bearer <API key>` is still accepted for
+        compatibility.
       tags:
         - Partner
+        - Balances
       x-visibility: partner
+      security:
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Success
         '400':
-          description: Bad request
+          description: Bad request — validation error or business rule failure.
         '401':
-          description: Unauthorized
+          description: Unauthorized — missing or invalid API key.
         '403':
-          description: Forbidden
+          description: Forbidden — insufficient permissions for this operation.
         '500':
           description: Internal server error
-      security:
-        - Authorization: []
   /api/deposit-address:
     get:
       operationId: get_api_deposit_address
-      summary: GET /api/deposit-address
+      summary: List deposit addresses
+      description: >-
+        Returns deposit addresses for the authenticated user, newest first, each
+        with related deposit summaries (`id`, `amount`, `currency`, `status`,
+        `createdAt`).
+
+
+        **Authentication:** `Authorization: <API key>` — send the raw key (no
+        `Bearer` prefix required). `Bearer <API key>` is still accepted for
+        compatibility.
       tags:
         - Partner
+        - Deposits
       x-visibility: partner
+      security:
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Success
         '400':
-          description: Bad request
+          description: Bad request — validation error or business rule failure.
         '401':
-          description: Unauthorized
+          description: Unauthorized — missing or invalid API key.
         '403':
-          description: Forbidden
+          description: Forbidden — insufficient permissions for this operation.
         '500':
           description: Internal server error
     post:
       operationId: post_api_deposit_address
-      summary: POST /api/deposit-address
+      summary: Create deposit address
+      description: >-
+        Allocates a chain deposit address for an end-user.
+
+
+        **Body (JSON):** `network` — one of `ETH`, `TRX`, `SEP`, `TRX_SHASTA`,
+        `BNB`, `tBNB`; `identifier` (required); `referenceId` (optional).
+
+
+        If the user is linked to a merchant profile, that profile must be
+        **ACTIVE** or the request fails.
+
+
+        **Authentication:** `Authorization: <API key>` — send the raw key (no
+        `Bearer` prefix required). `Bearer <API key>` is still accepted for
+        compatibility.
       tags:
         - Partner
+        - Deposits
       x-visibility: partner
+      security:
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Success
         '400':
-          description: Bad request
+          description: Bad request — validation error or business rule failure.
         '401':
-          description: Unauthorized
+          description: Unauthorized — missing or invalid API key.
         '403':
-          description: Forbidden
+          description: Forbidden — insufficient permissions for this operation.
         '500':
           description: Internal server error
   /api/deposit-page:
     get:
       operationId: get_api_deposit_page
-      summary: GET /api/deposit-page
+      summary: Resolve deposit session (public)
+      description: >-
+        Returns deposit details for a **single-use** hosted deposit session.
+
+
+        **Query:** `token` (required) — session token issued when creating a
+        deposit URL flow.
+
+
+        **Not** authenticated with an API key. Successful responses include
+        `address`, `network`, `referenceId`, and an `expiresAt` hint; the token
+        is consumed on first successful use. Errors: missing token (400),
+        invalid token (404), expired or already used (410).
+
+
+        **Authentication:** none (session `token` only).
       tags:
         - Partner
+        - Deposits
       x-visibility: partner
+      security: []
       responses:
         '200':
-          description: Success
+          description: Deposit session resolved; token consumed.
         '400':
-          description: Bad request
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+          description: Missing `token` query parameter.
+        '404':
+          description: Invalid or unknown token.
+        '410':
+          description: Token expired or already used.
         '500':
           description: Internal server error
   /api/deposit-url:
     post:
       operationId: post_api_deposit_url
-      summary: POST /api/deposit-url
+      summary: Create deposit URL / session
+      description: >-
+        Creates a fresh deposit address (via upstream provisioning when
+        configured) and returns a session used for hosted checkout.
+
+
+        **Body (JSON):** `network`, `identifier`; optional `referenceId`,
+        `requestedCurrency`, `requestedAmount`, `token`. Merchant users require
+        an **ACTIVE** merchant profile.
+
+
+        **Authentication:** `Authorization: <API key>` — send the raw key (no
+        `Bearer` prefix required). `Bearer <API key>` is still accepted for
+        compatibility.
       tags:
         - Partner
+        - Deposits
       x-visibility: partner
+      security:
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Success
         '400':
-          description: Bad request
+          description: Bad request — validation error or business rule failure.
         '401':
-          description: Unauthorized
+          description: Unauthorized — missing or invalid API key.
         '403':
-          description: Forbidden
+          description: Forbidden — insufficient permissions for this operation.
         '500':
           description: Internal server error
     get:
       operationId: get_api_deposit_url
-      summary: GET /api/deposit-url
+      summary: List deposit link metadata
+      description: >-
+        Lists existing deposit addresses for the user and builds hosted page
+        URLs of the form `{app base URL}/deposit/{depositAddressId}`, including
+        address, `network`, `createdAt`, and nested deposits.
+
+
+        **Query:** optional `network` to filter by chain.
+
+
+        **Authentication:** `Authorization: <API key>` — send the raw key (no
+        `Bearer` prefix required). `Bearer <API key>` is still accepted for
+        compatibility.
       tags:
         - Partner
+        - Deposits
       x-visibility: partner
+      security:
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Success
         '400':
-          description: Bad request
+          description: Bad request — validation error or business rule failure.
         '401':
-          description: Unauthorized
+          description: Unauthorized — missing or invalid API key.
         '403':
-          description: Forbidden
+          description: Forbidden — insufficient permissions for this operation.
         '500':
           description: Internal server error
   /api/exchange-rates:
     get:
       operationId: get_api_exchange_rates
-      summary: GET /api/exchange-rates
+      summary: Get exchange rates
+      description: >-
+        Returns quoted rates for a target currency.
+
+
+        **Query:** `requestedCurrency` (required) — 3-letter ISO-style code.
+
+
+        **Response:** `baseCurrency`, upstream `rates`, and server `timestamp`.
+
+
+        **Authentication:** `Authorization: <API key>` — send the raw key (no
+        `Bearer` prefix required). `Bearer <API key>` is still accepted for
+        compatibility.
       tags:
         - Partner
+        - Rates
       x-visibility: partner
+      security:
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Success
         '400':
-          description: Bad request
+          description: Bad request — validation error or business rule failure.
         '401':
-          description: Unauthorized
+          description: Unauthorized — missing or invalid API key.
         '403':
-          description: Forbidden
+          description: Forbidden — insufficient permissions for this operation.
         '500':
           description: Internal server error
   /api/transactions:
     get:
       operationId: get_api_transactions
-      summary: GET /api/transactions
+      summary: List transactions
+      description: >-
+        Paginated ledger of deposits, withdrawals, and related records for the
+        authenticated user.
+
+
+        **Query:** `page`, `limit` (defaults apply); optional `type`, `status`,
+        `currency` to filter. Response includes fee breakdowns and `referenceId`
+        resolution from deposits, withdrawals, and webhook metadata where
+        present.
+
+
+        **Authentication:** `Authorization: <API key>` — send the raw key (no
+        `Bearer` prefix required). `Bearer <API key>` is still accepted for
+        compatibility.
       tags:
         - Partner
+        - Transactions
       x-visibility: partner
+      security:
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Success
         '400':
-          description: Bad request
+          description: Bad request — validation error or business rule failure.
         '401':
-          description: Unauthorized
+          description: Unauthorized — missing or invalid API key.
         '403':
-          description: Forbidden
+          description: Forbidden — insufficient permissions for this operation.
         '500':
           description: Internal server error
   /api/withdrawals:
     post:
       operationId: post_api_withdrawals
-      summary: POST /api/withdrawals
+      summary: Create withdrawal
+      description: >-
+        Creates a withdrawal and reserves balance (pending) while the payout is
+        processed.
+
+
+        **Body (JSON):** `amount` — decimal **string**; `currency` (defaults to
+        `USD`); `destination` — payout address; optional `description`,
+        `network`, `referenceId`.
+
+
+        Fees are calculated with the internal withdrawal fee settings;
+        insufficient available balance (including fees) returns **400** with
+        `available` / `feeInfo` where applicable. Validation failures return
+        **400** with field details.
+
+
+        **Authentication:** `Authorization: <API key>` — send the raw key (no
+        `Bearer` prefix required). `Bearer <API key>` is still accepted for
+        compatibility.
       tags:
         - Partner
+        - Payouts
       x-visibility: partner
+      security:
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Success
         '400':
-          description: Bad request
+          description: Bad request — validation error or business rule failure.
         '401':
-          description: Unauthorized
+          description: Unauthorized — missing or invalid API key.
         '403':
-          description: Forbidden
+          description: Forbidden — insufficient permissions for this operation.
         '500':
           description: Internal server error
     get:
       operationId: get_api_withdrawals
-      summary: GET /api/withdrawals
+      summary: List withdrawals
+      description: >-
+        Lists withdrawal requests for the authenticated user with status and
+        metadata.
+
+
+        **Authentication:** `Authorization: <API key>` — send the raw key (no
+        `Bearer` prefix required). `Bearer <API key>` is still accepted for
+        compatibility.
       tags:
         - Partner
+        - Payouts
       x-visibility: partner
+      security:
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Success
         '400':
-          description: Bad request
+          description: Bad request — validation error or business rule failure.
         '401':
-          description: Unauthorized
+          description: Unauthorized — missing or invalid API key.
         '403':
-          description: Forbidden
+          description: Forbidden — insufficient permissions for this operation.
         '500':
           description: Internal server error
-x-readme: {}
