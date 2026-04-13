@@ -2,47 +2,88 @@
 title: Welcome to DCE
 hidden: false
 ---
-<Callout icon="📘" theme="info">
-  **Template:**  Delete this callout and edit this page with your content and links.
-</Callout>
+DCE is a cryptocurrency payments and financial services platform. The **DCE API** lets you accept deposits, manage withdrawals, query balances and transaction history, use hosted deposit flows, and receive **webhooks** when money movement and ledger events occur—all over a straightforward JSON HTTP API.
 
-<Cards>
-  {/* Edit the props below to customize these components */}
-  <Card title="Quick Start" href="#" icon="fa-duotone fa-rocket-launch">Learn how to get started with our product</Card>
+This page is the front door: what the product is, how to start integrating, where the technical detail lives, and how to reach the team.
 
-  <Card title="API Reference" href="#" icon="fa-duotone fa-code-simple">Explore endpoints and build your integration</Card>
+***
 
-  <Card title="Build with AI" href="#" icon="fa-duotone fa-sparkles">Use LLM features to automate your workflow</Card>
-</Cards>
+## What you can do with the API
 
-<br />
+- **Deposits** — Allocate chain deposit addresses and optional hosted deposit pages for end users.
+- **Withdrawals (payouts)** — Create and track withdrawals with configurable fees and balance checks.
+- **Balances & transactions** — Read per-currency balances and a unified transaction history.
+- **Exchange rates** — Fetch rates for display or reconciliation.
+- **Settlements & reconciliation** — Work with settlement workflows and reporting where your account allows it.
+- **Webhooks** — Receive signed POST callbacks to your HTTPS URL for deposit, withdrawal, and transaction lifecycle events.
 
-## Recent Releases
+All merchant routes live under `/api`. Authenticate with your API key in the `Authorization` header (raw key is supported; a `Bearer` prefix is optional for compatibility). Treat keys as **server-side secrets** only.
 
-<Cards>
-  <Card isNew kind="tile" title="v2.0 Migration" href="#" icon="fa-duotone fa-magnifying-glass">Everything you need to upgrade</Card>
+***
 
-  <Card kind="tile" title="Webhooks" href="#" icon="fa-duotone fa-bullhorn">Real-time events are now available</Card>
+## Environments
 
-  <Card kind="tile" title="Android SDK" href="#" icon="fa-duotone fa-robot">Our native Android library is out of beta</Card>
-</Cards>
+| Environment | Base URL                    |
+| ----------- | --------------------------- |
+| Production  | `https://api.dcepay.io`     |
+| Staging     | `https://staging.dcepay.io` |
 
-<br />
+Append path `/api/...` to these hosts when calling endpoints (for example `https://api.dcepay.io/api/balance?currency=USD`).
 
-## The Basics
+Use staging for development and integration testing when your account includes access; use production only for live funds and customers.
 
-<Cards>
-  <Card kind="tile" title="Customize" href="#" icon="fa-duotone fa-brush">Style the widget to match your brand</Card>
+***
 
-  <Card kind="tile" title="Integrations" href="#" icon="fa-duotone fa-arrow-down-left-and-arrow-up-right-to-center">Connect with third-party services</Card>
+## Getting started (short path)
 
-  <Card kind="tile" title="CLI" href="#" icon="fa-duotone fa-terminal">Manage resources from your terminal</Card>
+1. **Get access** — Obtain API credentials from your DCE contact. You need at least one API key and, if you use webhooks, a **webhook secret** and a publicly reachable **HTTPS** URL (ngrok or similar is fine for development).
+2. **Read authentication** — See [Authentication Setup](authentication.md) and [Merchant Authentication Guide](merchant-authentication-guide.md) for headers, scopes, and safe handling of keys.
+3. **Follow the quick start** — [Quick Start Guide](quickstart.md) walks through environment setup, first requests, and common patterns.
+4. **Turn on webhooks** — Configure `webhookUrl`, `webhookSecret`, and `webhookEvents` on your merchant profile, then implement signature verification. Start with [Webhooks](webhooks.md) (especially _How the system delivers webhooks_).
+5. **Validate in staging** — Exercise deposits, withdrawals, and webhook delivery against staging before going live.
 
-  <Card kind="tile" title="Security" href="" icon="fa-duotone fa-shield-dog">Learn how we secure your data</Card>
+When you are ready for detail, use [API Reference](api-reference.md), [Endpoint Summary](endpoint-summary.md), and [Partner API Scope](partner-api-scope.md) to see which routes are available to your integration.
 
-  <Card kind="tile" title="Common Issues" href="" icon="fa-duotone fa-file-circle-info">Troubleshoot common issues</Card>
+***
 
-  <Card kind="tile" title="Sync" href="#" icon="fa-duotone fa-code-compare">Connect to a storage provider</Card>
-</Cards>
+## OpenAPI and interactive docs
 
-<br />
+- **OpenAPI (YAML)** — The merchant-oriented spec is generated as `openapi/v1/dce-api-openapi.yaml`. On a running DCE API deployment you can often fetch it at `/api/openapi` (redirects may exist from legacy `/dce-api-openapi.yaml`).
+- **Scalar** — If your deployment exposes it, `/docs/api` may embed Scalar against that OpenAPI URL.
+
+Regenerate specs locally with:
+
+```bash
+npm run openapi:generate
+```
+
+***
+
+## Contact us
+
+We are glad to hear from merchants, partners, and teams exploring integrations.
+
+| Topic                              | How to reach us                                                                                                                                       |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **General inquiries & onboarding** | [hello@dcepay.io](mailto:hello@dcepay.io)                                                                                                             |
+| **Integration & API support**      | Same address—include your environment (staging/production), approximate timestamps, and request IDs or correlation IDs if you have them.              |
+| **Collaboration & partnerships**   | [hello@dcepay.io](mailto:hello@dcepay.io) with “Partnership” or “Collaboration” in the subject and a short description of your use case and timeline. |
+| **Security disclosures**           | Email [hello@dcepay.io](mailto:hello@dcepay.io) with “Security” in the subject; avoid posting sensitive material in public channels.                  |
+
+We do not publish API keys or secrets over email. Use secure channels your account team provides for credential handoff when available.
+
+***
+
+## Related documentation
+
+- [Quick Start Guide](quickstart.md)
+- [Authentication Setup](authentication.md)
+- [Webhooks](webhooks.md)
+- [Error Handling](error-handling.md) & [Troubleshooting](troubleshooting.md)
+- [Security Guide](security-guide.md)
+
+If you are browsing this repository as a developer, the rest of the guides live in the [`docs/`](README.md) directory alongside this file.
+
+***
+
+_Last updated: April 2026_
