@@ -1,5 +1,5 @@
 ---
-title: DCE API integration guide
+title: Getting Started
 hidden: false
 ---
 <br />
