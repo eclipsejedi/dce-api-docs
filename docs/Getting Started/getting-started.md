@@ -1,88 +1,117 @@
 ---
-title: Welcome to DCE
+title: DCE API integration guide
 hidden: false
 ---
-DCE is a cryptocurrency payments and financial services platform. The **DCE API** lets you accept deposits, manage withdrawals, query balances and transaction history, use hosted deposit flows, and receive **webhooks** when money movement and ledger events occur—all over a straightforward JSON HTTP API.
+<br />
 
-This page is the front door: what the product is, how to start integrating, where the technical detail lives, and how to reach the team.
+Welcome to the DCE API documentation for merchants and integrators. These guides help you integrate with the platform to accept deposits, manage withdrawals, handle settlements, and automate operations with webhooks.
 
-***
+## 📋 Table of Contents
 
-## What you can do with the API
+### 🚀 Getting Started
 
-- **Deposits** — Allocate chain deposit addresses and optional hosted deposit pages for end users.
-- **Withdrawals (payouts)** — Create and track withdrawals with configurable fees and balance checks.
-- **Balances & transactions** — Read per-currency balances and a unified transaction history.
-- **Exchange rates** — Fetch rates for display or reconciliation.
-- **Settlements & reconciliation** — Work with settlement workflows and reporting where your account allows it.
-- **Webhooks** — Receive signed POST callbacks to your HTTPS URL for deposit, withdrawal, and transaction lifecycle events.
+- [Welcome & getting started](welcome-and-getting-started.md) — Overview, environments, first steps, contact & collaboration
+- [Quick Start Guide](quickstart.md) - Get up and running in minutes
+- [Authentication Setup](authentication.md) - API keys and request authentication
+- [Merchant Authentication Guide](merchant-authentication-guide.md) - Backend-only credential handling after account creation
+- [Testing Guide](testing-guide.md) - Test your integration and verify functionality
 
-All merchant routes live under `/api`. Authenticate with your API key in the `Authorization` header (raw key is supported; a `Bearer` prefix is optional for compatibility). Treat keys as **server-side secrets** only.
+### 💳 Core Payment Features
 
-***
+- [Deposits](deposits.md) - Accept customer payments and create deposit addresses
+- [Withdrawals](withdrawals.md) - Process withdrawals and manage payout flows
+- [Balance Management](balance-management.md) - Check balances and track funds
+- [Transactions](transactions.md) - View transaction history and status
 
-## Environments
+### 🔧 Advanced Features
 
-| Environment | Base URL                    |
-| ----------- | --------------------------- |
-| Production  | `https://api.dcepay.io`     |
-| Staging     | `https://staging.dcepay.io` |
+- [Settlements](settlements.md) - Request settlements and manage approval workflows
+- [Deposit URLs](deposits.md#deposit-urls) - Create hosted payment pages for customers
+- [Exchange Rates](exchange-rates.md) - Get current exchange rates for currency conversion
+- [Reconciliation](reconciliation.md) - Automated reconciliation processes
 
-Append path `/api/...` to these hosts when calling endpoints (for example `https://api.dcepay.io/api/balance?currency=USD`).
+### 🔗 Integration Tools
 
-Use staging for development and integration testing when your account includes access; use production only for live funds and customers.
+- [Webhooks](webhooks.md) - Handle real-time payment notifications
+- [API Reference](api-reference.md) - Complete technical reference for all endpoints
+- [Endpoint Summary](endpoint-summary.md) - Overview of all available endpoints
+- [Partner API Scope](partner-api-scope.md) - Partner-allowed vs internal-only endpoints
+- [Fees Reference](fees-reference.md) - Fee types, formulas, and reconciliation mappings
 
-***
+### 🛠️ Support & Troubleshooting
 
-## Getting started (short path)
-
-1. **Get access** — Obtain API credentials from your DCE contact. You need at least one API key and, if you use webhooks, a **webhook secret** and a publicly reachable **HTTPS** URL (ngrok or similar is fine for development).
-2. **Read authentication** — See [Authentication Setup](authentication.md) and [Merchant Authentication Guide](merchant-authentication-guide.md) for headers, scopes, and safe handling of keys.
-3. **Follow the quick start** — [Quick Start Guide](quickstart.md) walks through environment setup, first requests, and common patterns.
-4. **Turn on webhooks** — Configure `webhookUrl`, `webhookSecret`, and `webhookEvents` on your merchant profile, then implement signature verification. Start with [Webhooks](webhooks.md) (especially _How the system delivers webhooks_).
-5. **Validate in staging** — Exercise deposits, withdrawals, and webhook delivery against staging before going live.
-
-When you are ready for detail, use [API Reference](api-reference.md), [Endpoint Summary](endpoint-summary.md), and [Partner API Scope](partner-api-scope.md) to see which routes are available to your integration.
-
-***
-
-## OpenAPI and interactive docs
-
-- **OpenAPI (YAML)** — The merchant-oriented spec is generated as `openapi/v1/dce-api-openapi.yaml`. On a running DCE API deployment you can often fetch it at `/api/openapi` (redirects may exist from legacy `/dce-api-openapi.yaml`).
-- **Scalar** — If your deployment exposes it, `/docs/api` may embed Scalar against that OpenAPI URL.
-
-Regenerate specs locally with:
-
-```bash
-npm run openapi:generate
-```
+- [Error Handling](error-handling.md) - Understand common errors and troubleshooting
+- [Troubleshooting Guide](troubleshooting.md) - Resolve common integration issues
+- [Security Guide](security-guide.md) - Security best practices and compliance
 
 ***
 
-## Contact us
+## 🚀 Quick Start
 
-We are glad to hear from merchants, partners, and teams exploring integrations.
+New here? Read [Welcome & getting started](welcome-and-getting-started.md), then follow the [Quick Start Guide](quickstart.md) for hands-on steps.
 
-| Topic                              | How to reach us                                                                                                                                       |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **General inquiries & onboarding** | [hello@dcepay.io](mailto:hello@dcepay.io)                                                                                                             |
-| **Integration & API support**      | Same address—include your environment (staging/production), approximate timestamps, and request IDs or correlation IDs if you have them.              |
-| **Collaboration & partnerships**   | [hello@dcepay.io](mailto:hello@dcepay.io) with “Partnership” or “Collaboration” in the subject and a short description of your use case and timeline. |
-| **Security disclosures**           | Email [hello@dcepay.io](mailto:hello@dcepay.io) with “Security” in the subject; avoid posting sensitive material in public channels.                  |
+## 📚 Core Features
 
-We do not publish API keys or secrets over email. Use secure channels your account team provides for credential handoff when available.
+### Authentication & Security
 
-***
+- [Authentication Setup](authentication.md) - Learn how to set up API keys and authenticate requests
+- [Error Handling](error-handling.md) - Understand common errors and troubleshooting
 
-## Related documentation
+### Payment Processing
 
-- [Quick Start Guide](quickstart.md)
-- [Authentication Setup](authentication.md)
-- [Webhooks](webhooks.md)
-- [Error Handling](error-handling.md) & [Troubleshooting](troubleshooting.md)
-- [Security Guide](security-guide.md)
+- [Deposits](deposits.md) - Accept customer payments and create deposit addresses
+- [Withdrawals](withdrawals.md) - Process withdrawals and manage payout flows
+- [Balance Management](balance-management.md) - Check balances and track funds
+- [Transactions](transactions.md) - View transaction history and status
 
-If you are browsing this repository as a developer, the rest of the guides live in the [`docs/`](README.md) directory alongside this file.
+### Advanced Features
+
+- [Settlements](settlements.md) - Request settlements and manage approval workflows
+- [Deposit URLs](deposits.md#deposit-urls) - Create hosted payment pages for customers
+- [Exchange Rates](exchange-rates.md) - Get current exchange rates for currency conversion
+- [Reconciliation](reconciliation.md) - Automated reconciliation processes
+
+### Integration Tools
+
+- [Webhooks](webhooks.md) - Handle real-time payment notifications
+- [API Reference](api-reference.md) - Complete technical reference for all endpoints
+- [Endpoint Summary](endpoint-summary.md) - Overview of all available endpoints
+- [Testing Guide](testing-guide.md) - Test your integration and verify functionality
+- [Troubleshooting Guide](troubleshooting.md) - Resolve common integration issues
+- [Security Guide](security-guide.md) - Security best practices and compliance
+
+## 🔧 Getting Started
+
+1. **Set up authentication** - Get your API keys and configure request headers
+2. **Create your first deposit** - Generate deposit addresses for customer payments
+3. **Handle webhooks** - Set up webhook endpoints to receive payment notifications
+4. **Test your integration** - Use our testing tools to verify everything works
+
+## 📖 Documentation Structure
+
+This guide is organized into logical sections to help you find exactly what you need:
+
+- **Core Integration**: Authentication, deposits, withdrawals, and balance management
+- **Advanced Features**: Settlements, deposit URLs, and exchange rates
+- **Developer Tools**: API reference, testing, and error handling
+- **Examples**: Complete code examples and integration patterns
+
+## 🆘 Support
+
+If you need help with your integration:
+
+1. See [Welcome & getting started — Contact us](welcome-and-getting-started.md#contact-us) for **[hello@dcepay.io](mailto:hello@dcepay.io)** (inquiries, integration help, partnerships, security topics).
+2. Check the [Troubleshooting Guide](troubleshooting.md) for common issues and solutions
+3. Review the [Testing Guide](testing-guide.md) to verify your setup
+4. Consult the [Error Handling](error-handling.md) guide for error management
+5. Review the [Security Guide](security-guide.md) for security best practices
+6. Consult the [API Reference](api-reference.md) for detailed endpoint documentation
+
+## 🔗 Related Resources
+
+- [Testing Guide](testing-guide.md) — verify requests, webhooks, and end-to-end flows
+- [Authentication setup](authentication.md) — API key usage and safe patterns
+- [Security Guide](security-guide.md) — operational security for integrations
 
 ***
 
