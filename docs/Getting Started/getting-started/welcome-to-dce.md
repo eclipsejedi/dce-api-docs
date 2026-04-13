@@ -1,5 +1,5 @@
 ---
-title: '# Welcome to DCE'
+title: Welcome to DCE
 deprecated: false
 hidden: false
 metadata:
