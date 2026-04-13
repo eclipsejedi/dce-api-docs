@@ -1,7 +1,7 @@
 ---
 title: Partner API Scope
 deprecated: false
-hidden: false
+hidden: true
 metadata:
   robots: index
 ---
