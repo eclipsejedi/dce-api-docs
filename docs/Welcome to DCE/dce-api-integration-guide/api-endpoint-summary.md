@@ -1,7 +1,7 @@
 ---
 title: API Endpoint Summary
 deprecated: false
-hidden: false
+hidden: true
 metadata:
   robots: index
 ---
