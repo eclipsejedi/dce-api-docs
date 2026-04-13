@@ -1,5 +1,5 @@
 ---
-title: '# Authentication Setup'
+title: Authentication Setup
 deprecated: false
 hidden: false
 metadata:
