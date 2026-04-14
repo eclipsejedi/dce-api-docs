@@ -1,5 +1,5 @@
 ---
-title: Welcome to DCE
+title: Getting Started
 deprecated: false
 hidden: false
 metadata:
