@@ -5,7 +5,121 @@ hidden: true
 metadata:
   robots: index
 ---
-<br />
+## Overview
+
+DCE sends HTTPS `POST` requests to your configured `webhookUrl` when a deposit or withdrawal status changes.
+
+Each request includes:
+
+- `Content-Type: application/json`
+- `X-Webhook-Event`: event name
+- `X-Webhook-Signature`: lowercase hex HMAC-SHA256 signature of the exact raw request body, using your `webhookSecret`
+
+## Webhook setup
+
+Configure these fields on your merchant profile:
+
+- `webhookUrl`
+- `webhookSecret`
+- `webhookEnabled`
+- Optional: `webhookEvents`, `webhookTimeout`, `webhookRetryCount`
+
+## Events
+
+### Deposit events
+
+| Event               | Description                                       |
+| ------------------- | ------------------------------------------------- |
+| `deposit.pending`   | Deposit is created or awaiting final confirmation |
+| `deposit.confirmed` | Deposit is confirmed                              |
+| `deposit.failed`    | Deposit failed                                    |
+
+### Withdrawal events
+
+| Event                  | Description                         |
+| ---------------------- | ----------------------------------- |
+| `withdrawal.pending`   | Withdrawal is queued or in progress |
+| `withdrawal.confirmed` | Withdrawal is confirmed             |
+| `withdrawal.failed`    | Withdrawal failed                   |
+
+## Signature verification
+
+Verify `X-Webhook-Signature` against the **raw body** exactly as received before parsing JSON.
+
+```javascript
+const crypto = require('crypto');
+
+function verifyDceSignature(rawBody, signatureHeader, webhookSecret) {
+  const expected = crypto
+    .createHmac('sha256', webhookSecret)
+    .update(rawBody, 'utf8')
+    .digest('hex');
+
+  return crypto.timingSafeEqual(
+    Buffer.from(signatureHeader, 'hex'),
+    Buffer.from(expected, 'hex')
+  );
+}
+```
+
+## Delivery and retries
+
+- DCE retries failed deliveries (non-2xx, timeout, or network error) using exponential backoff.
+- Default retry count is `3` unless configured otherwise.
+- Return a `2xx` response after safely receiving the webhook.
+- Implement idempotency because retries can happen.
+
+## Sample payloads
+
+### `deposit.confirmed`
+
+```json
+{
+  "event": "deposit.confirmed",
+  "txHash": "tx_1752630134805_ti0a34wjs",
+  "toAddress": "0x1234567890123456789012345678901234567890",
+  "fromAddress": "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
+  "amount": "0.08",
+  "coinSymbol": "ETH",
+  "tokenSymbol": "ETH",
+  "confirmedAt": "2024-12-19T10:30:00Z",
+  "layer": "L1Transaction",
+  "feeCharges": {
+    "amount": "0.004",
+    "percentage": "0.05",
+    "type": "PERCENTAGE"
+  },
+  "receivableAmount": "0.076"
+}
+```
+
+### `withdrawal.confirmed`
+
+```json
+{
+  "event": "withdrawal.confirmed",
+  "txHash": "tx_1752630134805_ti0a34wjs",
+  "toAddress": "0x1234567890123456789012345678901234567890",
+  "fromAddress": "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
+  "amount": "0.08",
+  "coinSymbol": "ETH",
+  "tokenSymbol": "ETH",
+  "confirmedAt": "2024-12-19T10:30:00Z",
+  "layer": "L1Transaction",
+  "feeCharges": {
+    "amount": "0.004",
+    "percentage": "0.05",
+    "type": "PERCENTAGE"
+  },
+  "receivableAmount": "0.076"
+}
+```
+
+***
+
+For event-specific business behavior, refer to the [Deposits](deposits.md) and [Withdrawals](withdrawals.md) guides.
+
+# Webhooks
 
 The webhooks API allows you to receive real-time notifications about payment events, transaction status changes, and system updates. This guide covers webhook setup, event handling, signature verification, and best practices for reliable webhook processing.
 
