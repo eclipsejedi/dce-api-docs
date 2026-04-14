@@ -5,9 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-<br />
-
-Welcome to the DCE API documentation for merchants and integrators. These guides help you integrate with the platform to accept deposits, manage withdrawals, handle settlements, and automate operations with webhooks.
+Welcome to the DCE API documentation for merchants and integrators. These guides help you integrate with the platform to accept deposits, manage withdrawals, and automate operations with webhooks.
 
 ## 📋 Table of Contents
 
@@ -28,10 +26,8 @@ Welcome to the DCE API documentation for merchants and integrators. These guides
 
 ### 🔧 Advanced Features
 
-- [Settlements](settlements.md) - Request settlements and manage approval workflows
 - [Deposit URLs](deposits.md#deposit-urls) - Create hosted payment pages for customers
 - [Exchange Rates](exchange-rates.md) - Get current exchange rates for currency conversion
-- [Reconciliation](reconciliation.md) - Automated reconciliation processes
 
 ### 🔗 Integration Tools
 
@@ -69,10 +65,8 @@ New here? Read [Welcome & getting started](welcome-and-getting-started.md), then
 
 ### Advanced Features
 
-- [Settlements](settlements.md) - Request settlements and manage approval workflows
 - [Deposit URLs](deposits.md#deposit-urls) - Create hosted payment pages for customers
 - [Exchange Rates](exchange-rates.md) - Get current exchange rates for currency conversion
-- [Reconciliation](reconciliation.md) - Automated reconciliation processes
 
 ### Integration Tools
 
@@ -95,7 +89,7 @@ New here? Read [Welcome & getting started](welcome-and-getting-started.md), then
 This guide is organized into logical sections to help you find exactly what you need:
 
 - **Core Integration**: Authentication, deposits, withdrawals, and balance management
-- **Advanced Features**: Settlements, deposit URLs, and exchange rates
+- **Advanced Features**: Deposit URLs and exchange rates
 - **Developer Tools**: API reference, testing, and error handling
 - **Examples**: Complete code examples and integration patterns
 
