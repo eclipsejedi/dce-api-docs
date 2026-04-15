@@ -40,12 +40,12 @@ Use staging for development and integration testing when your account includes a
 ## Getting started (short path)
 
 1. **Get access** — Obtain API credentials from your DCE contact. You need at least one API key and, if you use webhooks, a **webhook secret** and a publicly reachable **HTTPS** URL (ngrok or similar is fine for development).
-2. **Read authentication** — See [Authentication Setup](authentication.md) and [Merchant Authentication Guide](merchant-authentication-guide.md) for headers, scopes, and safe handling of keys.
-3. **Follow the quick start** — [Quick Start Guide](quickstart.md) walks through environment setup, first requests, and common patterns.
-4. **Turn on webhooks** — Configure `webhookUrl`, `webhookSecret`, and `webhookEvents` on your merchant profile, then implement signature verification. Start with [Webhooks](webhooks.md) (especially _How the system delivers webhooks_).
+2. **Read authentication** — See [Authentication Setup](https://docs.dcepay.io/docs/authentication) and [Merchant Authentication Guide](https://docs.dcepay.io/docs/merchant-authentication-guide) for headers, scopes, and safe handling of keys.
+3. **Follow the quick start** — [Quick Start Guide](https://docs.dcepay.io/docs/quickstart) walks through environment setup, first requests, and common patterns.
+4. **Turn on webhooks** — Configure `webhookUrl`, `webhookSecret`, and `webhookEvents` on your merchant profile, then implement signature verification. Start with [Webhooks](https://docs.dcepay.io/docs/webhooks) (especially _How the system delivers webhooks_).
 5. **Validate in staging** — Exercise deposits, withdrawals, and webhook delivery against staging before going live.
 
-When you are ready for detail, use [API Reference](api-reference.md), [Endpoint Summary](endpoint-summary.md), and [Partner API Scope](partner-api-scope.md) to see which routes are available to your integration.
+When you are ready for detail, use [API Reference](https://docs.dcepay.io/docs/api-reference), [Endpoint Summary](https://docs.dcepay.io/docs/endpoint-summary), and [Partner API Scope](https://docs.dcepay.io/docs/partner-api-scope) to see which routes are available to your integration.
 
 ***
 
@@ -78,13 +78,13 @@ We do not publish API keys or secrets over email. Use secure channels your accou
 
 ## Related documentation
 
-- [Quick Start Guide](quickstart.md)
-- [Authentication Setup](authentication.md)
-- [Webhooks](webhooks.md)
-- [Error Handling](error-handling.md) & [Troubleshooting](troubleshooting.md)
-- [Security Guide](security-guide.md)
+- [Quick Start Guide](https://docs.dcepay.io/docs/quickstart)
+- [Authentication Setup](https://docs.dcepay.io/docs/authentication)
+- [Webhooks](https://docs.dcepay.io/docs/webhooks)
+- [Error Handling](https://docs.dcepay.io/docs/error-handling) & [Troubleshooting](https://docs.dcepay.io/docs/troubleshooting)
+- [Security Guide](https://docs.dcepay.io/docs/security-guide)
 
-If you are browsing this repository as a developer, the rest of the guides live in the [`docs/`](README.md) directory alongside this file.
+If you are browsing this repository as a developer, the rest of the guides live in the [`docs/`](https://docs.dcepay.io/docs/dce-api-integration-guide) directory alongside this file.
 
 ***
 
