@@ -11,9 +11,9 @@ Welcome to the DCE API documentation for merchants and integrators. These guides
 
 ### 🚀 Getting Started
 
-- [Welcome & getting started](https://docs.dcepay.io/docs/welcome-and-getting-started) — Overview, environments, first steps, contact & collaboration
-- [Quick Start Guide](https://docs.dcepay.io/docs/quickstart) - Get up and running in minutes
-- [Authentication Setup](https://docs.dcepay.io/docs/authentication) - API keys and request authentication
+- [Welcome & getting started](https://docs.dcepay.io/docs/welcome-to-dce) — Overview, environments, first steps, contact & collaboration
+- [Quick Start Guide](https://docs.dcepay.io/docs/quick-start-guide) - Get up and running in minutes
+- [Authentication Setup](https://docs.dcepay.io/docs/authentication-setup) - API keys and request authentication
 - [Merchant Authentication Guide](https://docs.dcepay.io/docs/merchant-authentication-guide) - Backend-only credential handling after account creation
 - [Testing Guide](https://docs.dcepay.io/docs/testing-guide) - Test your integration and verify functionality
 
@@ -33,8 +33,6 @@ Welcome to the DCE API documentation for merchants and integrators. These guides
 
 - [Webhooks](https://docs.dcepay.io/docs/webhooks) - Handle real-time payment notifications
 - [API Reference](https://docs.dcepay.io/docs/api-reference) - Complete technical reference for all endpoints
-- [Endpoint Summary](https://docs.dcepay.io/docs/endpoint-summary) - Overview of all available endpoints
-- [Partner API Scope](https://docs.dcepay.io/docs/partner-api-scope) - Partner-allowed vs internal-only endpoints
 - [Fees Reference](https://docs.dcepay.io/docs/fees-reference) - Fee types, formulas, and reconciliation mappings
 
 ### 🛠️ Support & Troubleshooting
