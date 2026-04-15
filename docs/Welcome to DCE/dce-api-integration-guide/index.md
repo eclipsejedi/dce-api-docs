@@ -11,71 +11,71 @@ Welcome to the DCE API documentation for merchants and integrators. These guides
 
 ### 🚀 Getting Started
 
-- [Welcome & getting started](welcome-and-getting-started.md) — Overview, environments, first steps, contact & collaboration
-- [Quick Start Guide](quickstart.md) - Get up and running in minutes
-- [Authentication Setup](authentication.md) - API keys and request authentication
-- [Merchant Authentication Guide](merchant-authentication-guide.md) - Backend-only credential handling after account creation
-- [Testing Guide](testing-guide.md) - Test your integration and verify functionality
+- [Welcome & getting started](https://docs.dcepay.io/docs/welcome-and-getting-started) — Overview, environments, first steps, contact & collaboration
+- [Quick Start Guide](https://docs.dcepay.io/docs/quickstart) - Get up and running in minutes
+- [Authentication Setup](https://docs.dcepay.io/docs/authentication) - API keys and request authentication
+- [Merchant Authentication Guide](https://docs.dcepay.io/docs/merchant-authentication-guide) - Backend-only credential handling after account creation
+- [Testing Guide](https://docs.dcepay.io/docs/testing-guide) - Test your integration and verify functionality
 
 ### 💳 Core Payment Features
 
-- [Deposits](deposits.md) - Accept customer payments and create deposit addresses
-- [Withdrawals](withdrawals.md) - Process withdrawals and manage payout flows
-- [Balance Management](balance-management.md) - Check balances and track funds
-- [Transactions](transactions.md) - View transaction history and status
+- [Deposits](https://docs.dcepay.io/docs/deposits) - Accept customer payments and create deposit addresses
+- [Withdrawals](https://docs.dcepay.io/docs/withdrawals) - Process withdrawals and manage payout flows
+- [Balance Management](https://docs.dcepay.io/docs/balance-management) - Check balances and track funds
+- [Transactions](https://docs.dcepay.io/docs/transactions) - View transaction history and status
 
 ### 🔧 Advanced Features
 
-- [Deposit URLs](deposits.md#deposit-urls) - Create hosted payment pages for customers
-- [Exchange Rates](exchange-rates.md) - Get current exchange rates for currency conversion
+- [Deposit URLs](https://docs.dcepay.io/docs/deposits#deposit-urls) - Create hosted payment pages for customers
+- [Exchange Rates](https://docs.dcepay.io/docs/exchange-rates) - Get current exchange rates for currency conversion
 
 ### 🔗 Integration Tools
 
-- [Webhooks](webhooks.md) - Handle real-time payment notifications
-- [API Reference](api-reference.md) - Complete technical reference for all endpoints
-- [Endpoint Summary](endpoint-summary.md) - Overview of all available endpoints
-- [Partner API Scope](partner-api-scope.md) - Partner-allowed vs internal-only endpoints
-- [Fees Reference](fees-reference.md) - Fee types, formulas, and reconciliation mappings
+- [Webhooks](https://docs.dcepay.io/docs/webhooks) - Handle real-time payment notifications
+- [API Reference](https://docs.dcepay.io/docs/api-reference) - Complete technical reference for all endpoints
+- [Endpoint Summary](https://docs.dcepay.io/docs/endpoint-summary) - Overview of all available endpoints
+- [Partner API Scope](https://docs.dcepay.io/docs/partner-api-scope) - Partner-allowed vs internal-only endpoints
+- [Fees Reference](https://docs.dcepay.io/docs/fees-reference) - Fee types, formulas, and reconciliation mappings
 
 ### 🛠️ Support & Troubleshooting
 
-- [Error Handling](error-handling.md) - Understand common errors and troubleshooting
-- [Troubleshooting Guide](troubleshooting.md) - Resolve common integration issues
-- [Security Guide](security-guide.md) - Security best practices and compliance
+- [Error Handling](https://docs.dcepay.io/docs/error-handling) - Understand common errors and troubleshooting
+- [Troubleshooting Guide](https://docs.dcepay.io/docs/troubleshooting) - Resolve common integration issues
+- [Security Guide](https://docs.dcepay.io/docs/security-guide) - Security best practices and compliance
 
 ***
 
 ## 🚀 Quick Start
 
-New here? Read [Welcome & getting started](welcome-and-getting-started.md), then follow the [Quick Start Guide](quickstart.md) for hands-on steps.
+New here? Read [Welcome & getting started](https://docs.dcepay.io/docs/welcome-and-getting-started), then follow the [Quick Start Guide](https://docs.dcepay.io/docs/quickstart) for hands-on steps.
 
 ## 📚 Core Features
 
 ### Authentication & Security
 
-- [Authentication Setup](authentication.md) - Learn how to set up API keys and authenticate requests
-- [Error Handling](error-handling.md) - Understand common errors and troubleshooting
+- [Authentication Setup](https://docs.dcepay.io/docs/authentication) - Learn how to set up API keys and authenticate requests
+- [Error Handling](https://docs.dcepay.io/docs/error-handling) - Understand common errors and troubleshooting
 
 ### Payment Processing
 
-- [Deposits](deposits.md) - Accept customer payments and create deposit addresses
-- [Withdrawals](withdrawals.md) - Process withdrawals and manage payout flows
-- [Balance Management](balance-management.md) - Check balances and track funds
-- [Transactions](transactions.md) - View transaction history and status
+- [Deposits](https://docs.dcepay.io/docs/deposits) - Accept customer payments and create deposit addresses
+- [Withdrawals](https://docs.dcepay.io/docs/withdrawals) - Process withdrawals and manage payout flows
+- [Balance Management](https://docs.dcepay.io/docs/balance-management) - Check balances and track funds
+- [Transactions](https://docs.dcepay.io/docs/transactions) - View transaction history and status
 
 ### Advanced Features
 
-- [Deposit URLs](deposits.md#deposit-urls) - Create hosted payment pages for customers
-- [Exchange Rates](exchange-rates.md) - Get current exchange rates for currency conversion
+- [Deposit URLs](https://docs.dcepay.io/docs/deposits#deposit-urls) - Create hosted payment pages for customers
+- [Exchange Rates](https://docs.dcepay.io/docs/exchange-rates) - Get current exchange rates for currency conversion
 
 ### Integration Tools
 
-- [Webhooks](webhooks.md) - Handle real-time payment notifications
-- [API Reference](api-reference.md) - Complete technical reference for all endpoints
-- [Endpoint Summary](endpoint-summary.md) - Overview of all available endpoints
-- [Testing Guide](testing-guide.md) - Test your integration and verify functionality
-- [Troubleshooting Guide](troubleshooting.md) - Resolve common integration issues
-- [Security Guide](security-guide.md) - Security best practices and compliance
+- [Webhooks](https://docs.dcepay.io/docs/webhooks) - Handle real-time payment notifications
+- [API Reference](https://docs.dcepay.io/docs/api-reference) - Complete technical reference for all endpoints
+- [Endpoint Summary](https://docs.dcepay.io/docs/endpoint-summary) - Overview of all available endpoints
+- [Testing Guide](https://docs.dcepay.io/docs/testing-guide) - Test your integration and verify functionality
+- [Troubleshooting Guide](https://docs.dcepay.io/docs/troubleshooting) - Resolve common integration issues
+- [Security Guide](https://docs.dcepay.io/docs/security-guide) - Security best practices and compliance
 
 ## 🔧 Getting Started
 
@@ -97,18 +97,18 @@ This guide is organized into logical sections to help you find exactly what you 
 
 If you need help with your integration:
 
-1. See [Welcome & getting started — Contact us](welcome-and-getting-started.md#contact-us) for **[hello@dcepay.io](mailto:hello@dcepay.io)** (inquiries, integration help, partnerships, security topics).
-2. Check the [Troubleshooting Guide](troubleshooting.md) for common issues and solutions
-3. Review the [Testing Guide](testing-guide.md) to verify your setup
-4. Consult the [Error Handling](error-handling.md) guide for error management
-5. Review the [Security Guide](security-guide.md) for security best practices
-6. Consult the [API Reference](api-reference.md) for detailed endpoint documentation
+1. See [Welcome & getting started — Contact us](https://docs.dcepay.io/docs/welcome-and-getting-started#contact-us) for **[hello@dcepay.io](mailto:hello@dcepay.io)** (inquiries, integration help, partnerships, security topics).
+2. Check the [Troubleshooting Guide](https://docs.dcepay.io/docs/troubleshooting) for common issues and solutions
+3. Review the [Testing Guide](https://docs.dcepay.io/docs/testing-guide) to verify your setup
+4. Consult the [Error Handling](https://docs.dcepay.io/docs/error-handling) guide for error management
+5. Review the [Security Guide](https://docs.dcepay.io/docs/security-guide) for security best practices
+6. Consult the [API Reference](https://docs.dcepay.io/docs/api-reference) for detailed endpoint documentation
 
 ## 🔗 Related Resources
 
-- [Testing Guide](testing-guide.md) — verify requests, webhooks, and end-to-end flows
-- [Authentication setup](authentication.md) — API key usage and safe patterns
-- [Security Guide](security-guide.md) — operational security for integrations
+- [Testing Guide](https://docs.dcepay.io/docs/testing-guide) — verify requests, webhooks, and end-to-end flows
+- [Authentication setup](https://docs.dcepay.io/docs/authentication) — API key usage and safe patterns
+- [Security Guide](https://docs.dcepay.io/docs/security-guide) — operational security for integrations
 
 ***
 
