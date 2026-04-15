@@ -38,7 +38,7 @@ Welcome to the DCE API documentation for merchants and integrators. These guides
 ### 🛠️ Support & Troubleshooting
 
 - [Error Handling](https://docs.dcepay.io/docs/error-handling) - Understand common errors and troubleshooting
-- [Troubleshooting Guide](https://docs.dcepay.io/docs/troubleshooting) - Resolve common integration issues
+- [Troubleshooting Guide](https://docs.dcepay.io/docs/troubleshooting-guide) - Resolve common integration issues
 - [Security Guide](https://docs.dcepay.io/docs/security-guide) - Security best practices and compliance
 
 ***
