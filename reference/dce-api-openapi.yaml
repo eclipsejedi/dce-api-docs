@@ -77,38 +77,32 @@ info:
 servers:
   - url: https://api.dcepay.io
     description: Production
-  - url: https://staging.dcepay.io
+  - url: https://api.dcepay.dev
     description: Staging
 tags:
   - name: Partner
-    description: >-
-      Merchant-facing integration: balances, deposit addresses and hosted
-      deposit links, exchange rates, transactions, withdrawals. Most routes send
-      the API key in `Authorization` (raw key; Bearer optional). `GET
-      /api/deposit-page` is a public session endpoint and uses a `token` query
-      parameter instead.
+    description: "Merchant-facing integration: balances, deposit addresses and
+      hosted deposit links, exchange rates, transactions, withdrawals. Most
+      routes send the API key in `Authorization` (raw key; Bearer optional).
+      `GET /api/deposit-page` is a public session endpoint and uses a `token`
+      query parameter instead."
   - name: Internal
-    description: >-
-      Operator and system routes: users, wallets, deposits, settlements,
-      reconciliation, webhooks, merchant configuration, and admin APIs.
+    description: "Operator and system routes: users, wallets, deposits, settlements,
+      reconciliation, webhooks, merchant configuration, and admin APIs."
   - name: Balances
-    description: >-
-      Per-currency available and pending balances for the authenticated merchant
-      user (`BalanceService`).
+    description: Per-currency available and pending balances for the authenticated
+      merchant user (`BalanceService`).
   - name: Deposits
-    description: >-
-      Deposit addresses (`NetworkSymbol`: ETH, TRX, SEP, TRX_SHASTA, BNB, tBNB),
-      deposit URLs, and single-use deposit page tokens.
+    description: "Deposit addresses (`NetworkSymbol`: ETH, TRX, SEP, TRX_SHASTA,
+      BNB, tBNB), deposit URLs, and single-use deposit page tokens."
   - name: Payouts
-    description: >-
-      Withdrawals with configurable fees (`WithdrawalFeeService`), balance
-      reservation, and payout processing.
+    description: Withdrawals with configurable fees (`WithdrawalFeeService`),
+      balance reservation, and payout processing.
   - name: Rates
     description: Exchange rates for a requested base currency.
   - name: Transactions
-    description: >-
-      Unified transaction history with pagination and optional filters; ties
-      deposits, withdrawals, and webhook metadata.
+    description: Unified transaction history with pagination and optional filters;
+      ties deposits, withdrawals, and webhook metadata.
   - name: Users
     description: Platform and merchant-scoped user records.
   - name: Wallets
@@ -120,10 +114,9 @@ tags:
   - name: Merchants
     description: Merchant fee config and settlement addresses.
   - name: Webhooks
-    description: >-
-      Operator listing and ingestion at `/api/webhook/event` (admin API key +
-      signed payload). Merchant-facing delivery is **outbound** HTTP POSTs to
-      the merchant `webhookUrl`; see API intro **Merchant webhooks** section.
+    description: Operator listing and ingestion at `/api/webhook/event` (admin API
+      key + signed payload). Merchant-facing delivery is **outbound** HTTP POSTs
+      to the merchant `webhookUrl`; see API intro **Merchant webhooks** section.
   - name: Admin
     description: System settings and background job administration.
 components:
@@ -132,8 +125,7 @@ components:
       type: apiKey
       in: header
       name: Authorization
-      description: >-
-        DCE merchant or operator API key. Send as the full `Authorization`
+      description: DCE merchant or operator API key. Send as the full `Authorization`
         header value using the raw key (no `Bearer` prefix required). `Bearer
         <API key>` is also accepted. Does not apply to `GET /api/deposit-page`
         (session `token` query parameter).
@@ -141,19 +133,33 @@ paths:
   /api/balance:
     get:
       operationId: get_api_balance
-      summary: Get balance for a currency
+      summary: Get balances (per currency and network)
       description: >-
-        Returns the authenticated merchant user’s balance for a single
-        fiat/crypto currency.
+        Balances are segmented per `(currency, network)` pair — deposits on a
+        chain can only be withdrawn on that same chain.
 
 
-        **Query:** `currency` (required) — 3–4 character currency code (for
-        example `USD`, `USDT`).
+        **Query (both optional):** `currency` — `USDT` | `USDC`; `network` —
+        `TRX`, `ETH`, `BNB`, `SOL` (testnets: `TRX_SHASTA`, `SEP`, `tBNB`,
+        `SOL_DEVNET`).
 
 
-        **Response:** `currency`, `available` and `pending` as decimal strings,
-        plus `lastUpdatedAt` when a balance row exists; otherwise zero balances
-        for that currency.
+        **Response:**
+
+        - With BOTH `currency` and `network`: the single balance row for that
+        pair — `currency`, `network`, `available`, `pending` (decimal strings),
+        `lastUpdatedAt` (zero balances if no row exists yet).
+
+        - Otherwise: `{ balances: [...] }` — every balance row the account holds
+        (optionally filtered), each with `currency`, `network`, `available`,
+        `pending`, `withdrawalEnabled`, `networkFee` (current per-chain
+        withdrawal fee, `null` when withdrawals are disabled for the pair),
+        `maxWithdrawable` (available minus the network fee, floored at 0), and
+        `lastUpdatedAt`.
+
+
+        Currently only `USDT` on `TRX` is enabled for deposits and withdrawals;
+        other pairs appear once enabled.
 
 
         **Authentication:** `Authorization: <API key>` — send the raw key (no
@@ -166,15 +172,15 @@ paths:
       security:
         - ApiKeyAuth: []
       responses:
-        '200':
+        "200":
           description: Success
-        '400':
+        "400":
           description: Bad request — validation error or business rule failure.
-        '401':
+        "401":
           description: Unauthorized — missing or invalid API key.
-        '403':
+        "403":
           description: Forbidden — insufficient permissions for this operation.
-        '500':
+        "500":
           description: Internal server error
   /api/deposit-address:
     get:
@@ -196,15 +202,15 @@ paths:
       security:
         - ApiKeyAuth: []
       responses:
-        '200':
+        "200":
           description: Success
-        '400':
+        "400":
           description: Bad request — validation error or business rule failure.
-        '401':
+        "401":
           description: Unauthorized — missing or invalid API key.
-        '403':
+        "403":
           description: Forbidden — insufficient permissions for this operation.
-        '500':
+        "500":
           description: Internal server error
     post:
       operationId: post_api_deposit_address
@@ -213,8 +219,10 @@ paths:
         Allocates a chain deposit address for an end-user.
 
 
-        **Body (JSON):** `network` — one of `ETH`, `TRX`, `SEP`, `TRX_SHASTA`,
-        `BNB`, `tBNB`; `identifier` (required); `referenceId` (optional).
+        **Body (JSON):** `network` — one of `TRX`, `ETH`, `BNB`, `SOL`
+        (testnets: `TRX_SHASTA`, `SEP`, `tBNB`, `SOL_DEVNET`); `identifier`
+        (required); `referenceId` (optional). Currently only `TRX` deposits are
+        enabled.
 
 
         If the user is linked to a merchant profile, that profile must be
@@ -231,15 +239,15 @@ paths:
       security:
         - ApiKeyAuth: []
       responses:
-        '200':
+        "200":
           description: Success
-        '400':
+        "400":
           description: Bad request — validation error or business rule failure.
-        '401':
+        "401":
           description: Unauthorized — missing or invalid API key.
-        '403':
+        "403":
           description: Forbidden — insufficient permissions for this operation.
-        '500':
+        "500":
           description: Internal server error
   /api/deposit-page:
     get:
@@ -266,15 +274,49 @@ paths:
       x-visibility: partner
       security: []
       responses:
-        '200':
+        "200":
           description: Deposit session resolved; token consumed.
-        '400':
+        "400":
           description: Missing `token` query parameter.
-        '404':
+        "404":
           description: Invalid or unknown token.
-        '410':
+        "410":
           description: Token expired or already used.
-        '500':
+        "500":
+          description: Internal server error
+  /api/deposit-page/status:
+    get:
+      operationId: get_api_deposit_page_status
+      summary: Poll deposit session payment status (public)
+      description: >-
+        Live payment status for a hosted deposit session — the hosted page polls
+        this to move through **waiting → detected → completed**.
+
+
+        **Query:** `token` (required) — the deposit session token.
+
+
+        **Errors:** missing token (400), invalid token (404), expired session
+        (410).
+
+
+        **Authentication:** none (session `token` only).
+      tags:
+        - Partner
+        - Deposits
+      x-visibility: partner
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: Success
+        "400":
+          description: Bad request — validation error or business rule failure.
+        "401":
+          description: Unauthorized — missing or invalid API key.
+        "403":
+          description: Forbidden — insufficient permissions for this operation.
+        "500":
           description: Internal server error
   /api/deposit-url:
     post:
@@ -300,15 +342,15 @@ paths:
       security:
         - ApiKeyAuth: []
       responses:
-        '200':
+        "200":
           description: Success
-        '400':
+        "400":
           description: Bad request — validation error or business rule failure.
-        '401':
+        "401":
           description: Unauthorized — missing or invalid API key.
-        '403':
+        "403":
           description: Forbidden — insufficient permissions for this operation.
-        '500':
+        "500":
           description: Internal server error
     get:
       operationId: get_api_deposit_url
@@ -332,15 +374,15 @@ paths:
       security:
         - ApiKeyAuth: []
       responses:
-        '200':
+        "200":
           description: Success
-        '400':
+        "400":
           description: Bad request — validation error or business rule failure.
-        '401':
+        "401":
           description: Unauthorized — missing or invalid API key.
-        '403':
+        "403":
           description: Forbidden — insufficient permissions for this operation.
-        '500':
+        "500":
           description: Internal server error
   /api/exchange-rates:
     get:
@@ -366,15 +408,15 @@ paths:
       security:
         - ApiKeyAuth: []
       responses:
-        '200':
+        "200":
           description: Success
-        '400':
+        "400":
           description: Bad request — validation error or business rule failure.
-        '401':
+        "401":
           description: Unauthorized — missing or invalid API key.
-        '403':
+        "403":
           description: Forbidden — insufficient permissions for this operation.
-        '500':
+        "500":
           description: Internal server error
   /api/transactions:
     get:
@@ -386,9 +428,9 @@ paths:
 
 
         **Query:** `page`, `limit` (defaults apply); optional `type`, `status`,
-        `currency` to filter. Response includes fee breakdowns and `referenceId`
-        resolution from deposits, withdrawals, and webhook metadata where
-        present.
+        `currency`, `network` to filter. Response rows carry `currency` and
+        `network`, fee breakdowns, and `referenceId` resolution from deposits,
+        withdrawals, and webhook metadata where present.
 
 
         **Authentication:** `Authorization: <API key>` — send the raw key (no
@@ -401,15 +443,15 @@ paths:
       security:
         - ApiKeyAuth: []
       responses:
-        '200':
+        "200":
           description: Success
-        '400':
+        "400":
           description: Bad request — validation error or business rule failure.
-        '401':
+        "401":
           description: Unauthorized — missing or invalid API key.
-        '403':
+        "403":
           description: Forbidden — insufficient permissions for this operation.
-        '500':
+        "500":
           description: Internal server error
   /api/withdrawals:
     post:
@@ -420,15 +462,32 @@ paths:
         processed.
 
 
-        **Body (JSON):** `amount` — decimal **string**; `currency` (defaults to
-        `USD`); `destination` — payout address; optional `description`,
-        `network`, `referenceId`.
+        **Body (JSON):** `amount` — decimal **string**; `currency` (required) —
+        `USDT` | `USDC`; `network` (required) — chain to pay out on (`TRX`,
+        `ETH`, `BNB`, `SOL`, or a testnet symbol); `destination` — payout
+        address; optional `description`, `referenceId`.
 
 
-        Fees are calculated with the internal withdrawal fee settings;
-        insufficient available balance (including fees) returns **400** with
-        `available` / `feeInfo` where applicable. Validation failures return
-        **400** with field details.
+        **Per-chain rules:** the `(currency, network)` pair must be enabled for
+        withdrawals (currently `USDT` on `TRX`) or the request fails with
+        **400** listing the enabled pairs. Balances are per-chain — funds on
+        other networks cannot cover the withdrawal. Total debited = `amount` +
+        commission + per-chain `networkFee` (quoted at submission from the asset
+        fee matrix).
+
+
+        **Idempotency:** `referenceId` is unique per merchant — resubmitting a
+        used reference returns **409** and never creates a second payout. A
+        reference left behind by a FAILED/CANCELLED attempt is released
+        automatically.
+
+
+        **Errors:** insufficient available balance (including fees) → **400**
+        with `available` / `feeInfo`; inactive/suspended merchant account →
+        **403** `Merchant account is not active`; validation failures → **400**
+        with field details. Reseller-initiated withdrawals are pinned to the
+        reseller's registered withdrawal address and require admin approval
+        before submission to the chain.
 
 
         **Authentication:** `Authorization: <API key>` — send the raw key (no
@@ -441,15 +500,15 @@ paths:
       security:
         - ApiKeyAuth: []
       responses:
-        '200':
+        "200":
           description: Success
-        '400':
+        "400":
           description: Bad request — validation error or business rule failure.
-        '401':
+        "401":
           description: Unauthorized — missing or invalid API key.
-        '403':
+        "403":
           description: Forbidden — insufficient permissions for this operation.
-        '500':
+        "500":
           description: Internal server error
     get:
       operationId: get_api_withdrawals
@@ -469,13 +528,13 @@ paths:
       security:
         - ApiKeyAuth: []
       responses:
-        '200':
+        "200":
           description: Success
-        '400':
+        "400":
           description: Bad request — validation error or business rule failure.
-        '401':
+        "401":
           description: Unauthorized — missing or invalid API key.
-        '403':
+        "403":
           description: Forbidden — insufficient permissions for this operation.
-        '500':
+        "500":
           description: Internal server error

@@ -5,8 +5,6 @@ hidden: false
 metadata:
   robots: index
 ---
-<br />
-
 This guide describes baseline security controls for integrating with DCE API.
 
 ## 1) Protect API credentials
@@ -33,7 +31,6 @@ For merchant outbound webhook consumption:
 - Reject invalid signatures with non-2xx.
 
 Recommended extra controls:
-
 - enforce HTTPS endpoint
 - IP allowlisting when possible
 - replay protection via event/timestamp/idempotency checks
@@ -54,7 +51,6 @@ Recommended extra controls:
 ## 6) Incident response (minimum)
 
 If compromise is suspected:
-
 1. Revoke/rotate affected API keys and webhook secrets.
 2. Isolate impacted systems.
 3. Review logs and timeline.

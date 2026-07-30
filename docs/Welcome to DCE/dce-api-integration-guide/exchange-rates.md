@@ -32,11 +32,11 @@ curl -X GET "https://api.dcepay.io/api/exchange-rates?requestedCurrency=USD" \
 
 #### Query Parameters
 
-| Parameter           | Type    | Required | Description                               |
-| ------------------- | ------- | -------- | ----------------------------------------- |
-| `requestedCurrency` | string  | No       | Base currency for rates (default: USD)    |
-| `targetCurrencies`  | string  | No       | Comma-separated list of target currencies |
-| `includeHistorical` | boolean | No       | Include historical rate data              |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `requestedCurrency` | string | No | Base currency for rates (default: USD) |
+| `targetCurrencies` | string | No | Comma-separated list of target currencies |
+| `includeHistorical` | boolean | No | Include historical rate data |
 
 #### Response
 
@@ -148,27 +148,27 @@ console.log(`${usdAmount} USD = ${ethAmount} ETH`);
 
 ### Fiat Currencies
 
-| Currency | Code              | Name   | Status |
-| -------- | ----------------- | ------ | ------ |
-| USD      | US Dollar         | Active |        |
-| EUR      | Euro              | Active |        |
-| GBP      | British Pound     | Active |        |
-| JPY      | Japanese Yen      | Active |        |
-| CAD      | Canadian Dollar   | Active |        |
-| AUD      | Australian Dollar | Active |        |
-| CHF      | Swiss Franc       | Active |        |
-| CNY      | Chinese Yuan      | Active |        |
+| Currency | Code | Name | Status |
+|----------|------|------|--------|
+| USD | US Dollar | Active |
+| EUR | Euro | Active |
+| GBP | British Pound | Active |
+| JPY | Japanese Yen | Active |
+| CAD | Canadian Dollar | Active |
+| AUD | Australian Dollar | Active |
+| CHF | Swiss Franc | Active |
+| CNY | Chinese Yuan | Active |
 
 ### Cryptocurrencies
 
-| Currency | Code        | Name             | Network | Status |
-| -------- | ----------- | ---------------- | ------- | ------ |
-| BTC      | Bitcoin     | Bitcoin          | Active  |        |
-| ETH      | Ethereum    | Ethereum         | Active  |        |
-| USDT     | Tether      | Ethereum         | Active  |        |
-| USDC     | USD Coin    | Ethereum         | Active  |        |
-| TRX      | TRON        | TRON             | Active  |        |
-| SEP      | Sepolia ETH | Ethereum Testnet | Active  |        |
+| Currency | Code | Name | Network | Status |
+|----------|------|------|---------|--------|
+| BTC | Bitcoin | Bitcoin | Active |
+| ETH | Ethereum | Ethereum | Active |
+| USDT | Tether | Ethereum | Active |
+| USDC | USD Coin | Ethereum | Active |
+| TRX | TRON | TRON | Active |
+| SEP | Sepolia ETH | Ethereum Testnet | Active |
 
 ## Rate Updates
 
@@ -273,13 +273,13 @@ curl -X GET "https://api.dcepay.io/api/exchange-rates/history?fromCurrency=USD&t
 
 #### Query Parameters
 
-| Parameter      | Type   | Required | Description                           |
-| -------------- | ------ | -------- | ------------------------------------- |
-| `fromCurrency` | string | Yes      | Source currency                       |
-| `toCurrency`   | string | Yes      | Target currency                       |
-| `startDate`    | string | Yes      | Start date (ISO 8601 format)          |
-| `endDate`      | string | Yes      | End date (ISO 8601 format)            |
-| `interval`     | string | No       | Data interval (hourly, daily, weekly) |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `fromCurrency` | string | Yes | Source currency |
+| `toCurrency` | string | Yes | Target currency |
+| `startDate` | string | Yes | Start date (ISO 8601 format) |
+| `endDate` | string | Yes | End date (ISO 8601 format) |
+| `interval` | string | No | Data interval (hourly, daily, weekly) |
 
 #### Response
 
@@ -326,7 +326,7 @@ Exchange rates are sourced from multiple providers:
 
 - **Real-time Updates**: Rates updated every 30 seconds
 - **Accuracy**: ±0.1% for major currency pairs
-- **Latency**: \<100ms for rate retrieval
+- **Latency**: <100ms for rate retrieval
 - **Reliability**: 99.9% uptime guarantee
 
 ### Rate Validation
@@ -376,12 +376,12 @@ class RateValidator {
 
 ### Common Errors
 
-| Error Code            | Description                 | Resolution                     |
-| --------------------- | --------------------------- | ------------------------------ |
-| `rate_not_found`      | Exchange rate not available | Check supported currencies     |
-| `invalid_currency`    | Currency code is invalid    | Use valid currency codes       |
-| `rate_expired`        | Rate data is outdated       | Refresh rates                  |
-| `service_unavailable` | Rate service unavailable    | Retry with exponential backoff |
+| Error Code | Description | Resolution |
+|------------|-------------|------------|
+| `rate_not_found` | Exchange rate not available | Check supported currencies |
+| `invalid_currency` | Currency code is invalid | Use valid currency codes |
+| `rate_expired` | Rate data is outdated | Refresh rates |
+| `service_unavailable` | Rate service unavailable | Retry with exponential backoff |
 
 ### Error Response Format
 
@@ -695,6 +695,6 @@ class CryptoTradingService {
 }
 ```
 
-***
+---
 
-_For more information about payment processing, see the [Deposits](deposits.md) and [Transactions](transactions.md) documentation._
+*For more information about payment processing, see the [Deposits](https://docs.dcepay.io/docs/deposits) and [Transactions](https://docs.dcepay.io/docs/transactions) documentation.* 

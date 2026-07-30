@@ -5,6 +5,8 @@ hidden: false
 metadata:
   robots: index
 ---
+This guide covers only merchant-facing webhooks sent by DCE for deposit and withdrawal notifications.
+
 ## Overview
 
 DCE sends HTTPS `POST` requests to your configured `webhookUrl` when a deposit or withdrawal status changes.
@@ -14,6 +16,9 @@ Each request includes:
 - `Content-Type: application/json`
 - `X-Webhook-Event`: event name
 - `X-Webhook-Signature`: lowercase hex HMAC-SHA256 signature of the exact raw request body, using your `webhookSecret`
+- `X-Webhook-Id`: stable delivery id — identical on every redelivery of the same event
+
+The JSON body also carries the same id as an `eventId` field. Deduplicate on it: delivery is **at-least-once**, so the same event can arrive more than once.
 
 ## Webhook setup
 
@@ -28,19 +33,28 @@ Configure these fields on your merchant profile:
 
 ### Deposit events
 
-| Event               | Description                                       |
-| ------------------- | ------------------------------------------------- |
-| `deposit.pending`   | Deposit is created or awaiting final confirmation |
-| `deposit.confirmed` | Deposit is confirmed                              |
-| `deposit.failed`    | Deposit failed                                    |
+| Event | Description |
+|-------|-------------|
+| `deposit.confirmed` | Deposit is confirmed |
+| `deposit.failed` | Deposit failed |
+
+> Deposits below 1 USD equivalent are fee-exempt and do **not** trigger a merchant deposit callback.
 
 ### Withdrawal events
 
-| Event                  | Description                         |
-| ---------------------- | ----------------------------------- |
-| `withdrawal.pending`   | Withdrawal is queued or in progress |
-| `withdrawal.confirmed` | Withdrawal is confirmed             |
-| `withdrawal.failed`    | Withdrawal failed                   |
+| Event | Description |
+|-------|-------------|
+| `withdrawal.confirmed` | Withdrawal is confirmed |
+| `withdrawal.failed` | Withdrawal failed |
+
+### Transaction events
+
+| Event | Description |
+|-------|-------------|
+| `transaction.confirmed` | Ledger transaction confirmed |
+| `transaction.failed` | Ledger transaction failed |
+
+Pending states (`deposit.pending`, `withdrawal.pending`) are tracked internally but do not currently produce outbound merchant webhooks — only confirmed/failed events are delivered. Poll the Deposits/Withdrawals APIs (or the deposit-page status endpoint) for in-flight state.
 
 ## Signature verification
 
@@ -64,32 +78,63 @@ function verifyDceSignature(rawBody, signatureHeader, webhookSecret) {
 
 ## Delivery and retries
 
-- DCE retries failed deliveries (non-2xx, timeout, or network error) using exponential backoff.
-- Default retry count is `3` unless configured otherwise.
-- Return a `2xx` response after safely receiving the webhook.
-- Implement idempotency because retries can happen.
+- Webhooks are produced through a **durable outbox**: the event is enqueued in the same database transaction as the ledger change, dispatched immediately after commit, and swept by a background worker if the immediate dispatch is lost. Delivery is therefore **at-least-once** — your consumer must be idempotent.
+- A delivery only counts as acknowledged when your endpoint returns a `2xx` status **and** a JSON body containing `{ "ok": true }`. A `2xx` without that acknowledgement is retried.
+- Failed or unacknowledged deliveries (non-2xx, timeout, network error, missing ack) are retried with exponential backoff (1s doubling, capped at 30s) up to `webhookRetryCount` (default `3`).
+- Redeliveries reuse the same `eventId` / `X-Webhook-Id`, so deduplicating on `eventId` makes retries safe.
+- For withdrawals, your own `referenceId` is also an idempotency key on the API side: resubmitting a withdrawal with an already-used `referenceId` returns `409 Duplicate referenceId` and never creates a second payout.
 
 ## Sample payloads
+
+The event name travels in the `X-Webhook-Event` header; the body carries a `type` field and a stable `eventId`.
 
 ### `deposit.confirmed`
 
 ```json
 {
-  "event": "deposit.confirmed",
-  "txHash": "tx_1752630134805_ti0a34wjs",
-  "toAddress": "0x1234567890123456789012345678901234567890",
-  "fromAddress": "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
-  "amount": "0.08",
-  "coinSymbol": "ETH",
-  "tokenSymbol": "ETH",
-  "confirmedAt": "2024-12-19T10:30:00Z",
-  "layer": "L1Transaction",
+  "type": "deposit",
+  "depositId": "clx0d3p0s1t000001",
+  "amount": "100.00",
+  "currency": "USDT",
+  "status": "confirmed",
+  "identifier": "user123",
+  "txHash": "0x7f9fade1c0d57a7af66ab4ead79fade1c0d57a7af66ab4ead7c2c2eb7b11a91385",
+  "referenceId": "your-reference-id",
+  "address": "TX7uW4mP7cLoBnUYqkNhVpQvNczpxxxxxx",
+  "isMerchantDirectDeposit": false,
   "feeCharges": {
-    "amount": "0.004",
-    "percentage": "0.05",
-    "type": "PERCENTAGE"
+    "amount": "0.25",
+    "percentage": "0.0025",
+    "type": "PERCENTAGE",
+    "activationFee": {
+      "amount": "0.5",
+      "charged": true
+    }
   },
-  "receivableAmount": "0.076"
+  "receivableAmount": "99.25",
+  "eventId": "b3a1c2d4-0000-0000-0000-000000000000"
+}
+```
+
+- `feeCharges.activationFee` reports the one-time address activation fee (0.5) charged on the first confirmed deposit to an address.
+- For merchant wallet top-ups (`isMerchantDirectDeposit: true`) the `feeCharges.type` is `FIXED_AMOUNT` and `amount` is the flat direct-deposit fee.
+- `receivableAmount` = `amount` − total fees (commission + activation fee, or the flat top-up fee).
+- Deposits below 1 USD equivalent are fee-exempt and no callback is sent.
+
+### `deposit.failed`
+
+```json
+{
+  "type": "deposit",
+  "depositId": "clx0d3p0s1t000002",
+  "amount": "100.00",
+  "currency": "USDT",
+  "identifier": "user123",
+  "status": "failed",
+  "reason": "Deposit failed",
+  "txHash": "0x7f9fade1c0d57a7af66ab4ead79fade1c0d57a7af66ab4ead7c2c2eb7b11a91385",
+  "address": "TX7uW4mP7cLoBnUYqkNhVpQvNczpxxxxxx",
+  "eventId": "b3a1c2d4-0000-0000-0000-000000000001"
 }
 ```
 
@@ -97,28 +142,51 @@ function verifyDceSignature(rawBody, signatureHeader, webhookSecret) {
 
 ```json
 {
-  "event": "withdrawal.confirmed",
-  "txHash": "tx_1752630134805_ti0a34wjs",
-  "toAddress": "0x1234567890123456789012345678901234567890",
-  "fromAddress": "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
-  "amount": "0.08",
-  "coinSymbol": "ETH",
-  "tokenSymbol": "ETH",
-  "confirmedAt": "2024-12-19T10:30:00Z",
-  "layer": "L1Transaction",
+  "type": "withdrawal",
+  "withdrawalId": "clx0w1thdr4w000001",
+  "amount": "200.00",
+  "currency": "USDT",
+  "status": "confirmed",
+  "txHash": "0x7f9fade1c0d57a7af66ab4ead79fade1c0d57a7af66ab4ead7c2c2eb7b11a91385",
+  "referenceId": "your-reference-id",
+  "address": "TX7uW4mP7cLoBnUYqkNhVpQvNczpxxxxxx",
+  "identifier": "your-reference-id",
   "feeCharges": {
-    "amount": "0.004",
-    "percentage": "0.05",
-    "type": "PERCENTAGE"
+    "amount": "1.00",
+    "percentage": "0",
+    "type": "FIXED_AMOUNT"
   },
-  "receivableAmount": "0.076"
+  "receivableAmount": "199.00",
+  "eventId": "b3a1c2d4-0000-0000-0000-000000000002"
 }
 ```
 
-***
+- `referenceId` (and `identifier`) is **your** merchant `referenceId` as submitted with the withdrawal — not an internal id — so you can correlate the callback with the request you made.
+- `feeCharges` is present only when a withdrawal commission was charged; `receivableAmount` = `amount` − commission.
 
-For event-specific business behavior, refer to the [Deposits](deposits.md) and [Withdrawals](withdrawals.md) guides.
+### `withdrawal.failed`
 
+```json
+{
+  "type": "withdrawal",
+  "withdrawalId": "clx0w1thdr4w000002",
+  "amount": "200.00",
+  "currency": "USDT",
+  "status": "failed",
+  "reason": "Insufficient funds at provider",
+  "txHash": "0x7f9fade1c0d57a7af66ab4ead79fade1c0d57a7af66ab4ead7c2c2eb7b11a91385",
+  "referenceId": "your-reference-id",
+  "address": "TX7uW4mP7cLoBnUYqkNhVpQvNczpxxxxxx",
+  "identifier": "your-reference-id",
+  "eventId": "b3a1c2d4-0000-0000-0000-000000000003"
+}
+```
+
+After a `withdrawal.failed`, the reserved funds (amount + fees) are refunded and your `referenceId` is released, so you may retry the same `referenceId` with a new submission.
+
+---
+
+For event-specific business behavior, refer to the [Deposits](https://docs.dcepay.io/docs/deposits) and [Withdrawals](https://docs.dcepay.io/docs/withdrawals) guides.
 # Webhooks
 
 The webhooks API allows you to receive real-time notifications about payment events, transaction status changes, and system updates. This guide covers webhook setup, event handling, signature verification, and best practices for reliable webhook processing.
@@ -129,24 +197,25 @@ There are three different paths; only the first one is the merchant integration 
 
 ### 1. Outbound webhooks to your URL (merchant integration)
 
-1. You configure `webhookUrl`, `webhookSecret`, `webhookEnabled`, and optionally `webhookEvents`, `webhookTimeout`, and `webhookRetryCount` on the merchant profile (for example via user/merchant APIs).
-2. When a deposit, withdrawal, or underlying transaction changes state, `WebhookService` may queue a delivery: it creates a `webhookLog` row, then **POST**s JSON to your `webhookUrl`.
+1. You configure **`webhookUrl`**, **`webhookSecret`**, **`webhookEnabled`**, and optionally **`webhookEvents`**, **`webhookTimeout`**, and **`webhookRetryCount`** on the merchant profile (for example via user/merchant APIs).
+2. When a deposit, withdrawal, or underlying transaction changes state, the event is written to a **durable outbox row in the same database transaction as the ledger change**. After commit, a dispatcher delivers it (creating a **`webhookLog`** row whose id doubles as the on-the-wire `eventId`) by **POST**ing JSON to your `webhookUrl`. A cron sweeper re-dispatches any outbox row a crash left behind, so delivery is **at-least-once** and consumers must deduplicate by `eventId`.
 3. The HTTP request includes:
-   - `Content-Type: application/json`
-   - `X-Webhook-Event` — the event name (for example `deposit.confirmed`, `withdrawal.failed`)
-   - `X-Webhook-Signature` — lowercase hex **HMAC-SHA256** of the **exact raw body bytes**, keyed by `webhookSecret` (same string as `JSON.stringify(payload)` on the server). **Verify using the raw body**, not a re-serialized `JSON.stringify` of a parsed object, so key order cannot break verification.
+   - **`Content-Type: application/json`**
+   - **`X-Webhook-Event`** — the event name (for example `deposit.confirmed`, `withdrawal.failed`)
+   - **`X-Webhook-Id`** — the stable delivery id (identical on every redelivery; also present in the body as `eventId`)
+   - **`X-Webhook-Signature`** — lowercase hex **HMAC-SHA256** of the **exact raw body bytes**, keyed by `webhookSecret` (same string as `JSON.stringify(payload)` on the server). **Verify using the raw body**, not a re-serialized `JSON.stringify` of a parsed object, so key order cannot break verification.
 4. **Subscription filter:** if `webhookEvents` is a **non-empty** string array, only listed events are sent. If the field is missing or not parseable as a string array, there is no filter. An **empty** array means nothing is sent.
-5. **Retries:** failed HTTP status, timeouts, or network errors schedule retries with exponential backoff (capped at 30s) up to `webhookRetryCount` (default **3**). If the response body is JSON and contains `"ok": true`, retries are not scheduled for that attempt. Operators can run the `webhook-retries` background job to process due retries.
+5. **Acknowledgement & retries:** a delivery is final only when your endpoint returns a **2xx** status **and** a JSON body containing **`"ok": true`**. Anything else — failed HTTP status, timeout, network error, or a 2xx without the ack — schedules a retry with exponential backoff (1s doubling, capped at 30s) up to `webhookRetryCount` (default **3**). Operators can run the **`webhook-retries`** background job to process due retries. Redeliveries reuse the same `eventId`.
 
-**Event names in code** (not `payout.*`): `deposit.confirmed` | `deposit.failed` | `deposit.pending`; `withdrawal.confirmed` | `withdrawal.failed` | `withdrawal.pending`; `transaction.confirmed` | `transaction.failed`.
+**Event names in code** (not `payout.*`): `deposit.confirmed` | `deposit.failed`; `withdrawal.confirmed` | `withdrawal.failed`; `transaction.confirmed` | `transaction.failed`. Pending states (`deposit.pending`, `withdrawal.pending`) exist internally but do not currently produce outbound merchant deliveries.
 
 ### 2. Internal ingestion — `POST /api/webhook/event`
 
-This endpoint is **admin-only** (`admin:write`). It accepts callbacks from trusted upstream systems using `WEBHOOK_SECRET`, `x-signature` (hex HMAC-SHA256 of the JSON body after **recursive alphabetical key sorting**), and `x-timestamp` (Unix ms, ±5 minutes). It is **not** the URL you publish as a merchant. Successful processing updates core records via `WebhookHandler` and may trigger **outbound** deliveries in (1).
+This endpoint is **admin-only** (`admin:write`). It accepts callbacks from trusted upstream systems using **`WEBHOOK_SECRET`**, **`x-signature`** (hex HMAC-SHA256 of the JSON body after **recursive alphabetical key sorting**), and **`x-timestamp`** (Unix ms, ±5 minutes). It is **not** the URL you publish as a merchant. Successful processing updates core records via **`WebhookHandler`** and may trigger **outbound** deliveries in (1).
 
 ### 3. Chain-provider callbacks
 
-Additional routes under `/api/webhook/*` (for example chain adapters) handle provider-specific payloads and signatures. They are internal plumbing, not the merchant webhook contract.
+Additional routes under **`/api/webhook/*`** (for example chain adapters) handle provider-specific payloads and signatures. They are internal plumbing, not the merchant webhook contract.
 
 ## Overview
 
@@ -154,33 +223,31 @@ Additional routes under `/api/webhook/*` (for example chain adapters) handle pro
 
 **Inbound operator route:** `POST /api/webhook/event` is for **admin/system ingestion** only (signed with `WEBHOOK_SECRET`). It is **not** the URL you publish as a merchant.
 
-**Settlement notifications:** Outbound webhook event names in code are `deposit.*`, `withdrawal.*`, and `transaction.*`. Do not assume `settlement.*` events are emitted on the same merchant webhook channel unless your account team explicitly confirms it—use the Settlements API for settlement state when in doubt.
+**Settlement notifications:** Outbound webhook event names in code are **`deposit.*`**, **`withdrawal.*`**, and **`transaction.*`**. Do not assume `settlement.*` events are emitted on the same merchant webhook channel unless your account team explicitly confirms it—use the Settlements API for settlement state when in doubt.
 
 ## Webhook setup (merchant)
 
-Configure `webhookUrl`, `webhookSecret`, `webhookEnabled`, and optionally `webhookEvents`, `webhookTimeout`, and `webhookRetryCount` on the **merchant profile** (via user/merchant APIs).
+Configure **`webhookUrl`**, **`webhookSecret`**, **`webhookEnabled`**, and optionally **`webhookEvents`**, **`webhookTimeout`**, and **`webhookRetryCount`** on the **merchant profile** (via user/merchant APIs).
 
 Your HTTPS endpoint should:
 
 1. Accept **POST** requests with `Content-Type: application/json`
-2. Return `2xx` after the event is safely accepted (move heavy work async if needed)
-3. Verify `X-Webhook-Signature` (hex HMAC-SHA256 of the **raw body** with `webhookSecret`)
-4. Implement **idempotency** (retries are expected on failures/timeouts)
+2. Return **`2xx`** with a JSON body containing **`{ "ok": true }`** after the event is safely accepted (move heavy work async if needed) — a 2xx **without** that acknowledgement is treated as undelivered and retried
+3. Verify **`X-Webhook-Signature`** (hex HMAC-SHA256 of the **raw body** with `webhookSecret`)
+4. Implement **idempotency** keyed on the payload's **`eventId`** (delivery is at-least-once)
 
 ## Outbound event names (current code)
 
-| Event type              | Description                  |
-| ----------------------- | ---------------------------- |
-| `deposit.confirmed`     | Deposit confirmed            |
-| `deposit.failed`        | Deposit failed               |
-| `deposit.pending`       | Deposit pending              |
-| `withdrawal.confirmed`  | Withdrawal confirmed         |
-| `withdrawal.failed`     | Withdrawal failed            |
-| `withdrawal.pending`    | Withdrawal pending           |
+| Event type | Description |
+|------------|-------------|
+| `deposit.confirmed` | Deposit confirmed |
+| `deposit.failed` | Deposit failed |
+| `withdrawal.confirmed` | Withdrawal confirmed |
+| `withdrawal.failed` | Withdrawal failed |
 | `transaction.confirmed` | Ledger transaction confirmed |
-| `transaction.failed`    | Ledger transaction failed    |
+| `transaction.failed` | Ledger transaction failed |
 
-Payloads include an `event` field plus chain and business fields (see repository `src/types/webhook.ts` for internal TypeScript shapes). Do not rely on a generic `{ data, metadata }` envelope unless you normalize it yourself—integrate against `event` and the documented fields.
+The event name travels in the **`X-Webhook-Event`** header. Payloads carry a `type` field (`deposit` | `withdrawal` | `transaction`), a `status` field, a stable `eventId`, plus business fields (see the sample payloads earlier on this page). Do not rely on a generic `{ data, metadata }` envelope unless you normalize it yourself—integrate against the header event name and the documented fields.
 
 ## Internal: `POST /api/webhook/event`
 
@@ -207,12 +274,11 @@ Payloads include an `event` field plus chain and business fields (see repository
 
 ### Merchant outbound deliveries (`X-Webhook-Signature`)
 
-DCE signs the **exact raw JSON body bytes** sent in the webhook POST using your `webhookSecret`. The signature is **lowercase hex** HMAC-SHA256 and is sent in the `X-Webhook-Event` / `X-Webhook-Signature` headers (see **How the system delivers webhooks**).
+DCE signs the **exact raw JSON body bytes** sent in the webhook POST using your **`webhookSecret`**. The signature is **lowercase hex** HMAC-SHA256 and is sent in the **`X-Webhook-Event`** / **`X-Webhook-Signature`** headers (see **How the system delivers webhooks**).
 
 **Important:** verify the signature against the **raw HTTP body string** captured before JSON parsing. Re-stringifying `JSON.parse` output can break verification due to key ordering differences.
 
 **JavaScript (Express + raw body):**
-
 ```javascript
 const crypto = require('crypto');
 
@@ -239,7 +305,6 @@ app.post(
 ```
 
 **Python:**
-
 ```python
 import hmac
 import hashlib
@@ -257,18 +322,18 @@ def verify_webhook_signature(payload, signature, secret):
 # Flask webhook handler
 @app.route('/webhooks/dce', methods=['POST'])
 def webhook_handler():
-    signature = request.headers.get('Signature')
+    signature = request.headers.get('X-Webhook-Signature')
     payload = request.get_data(as_text=True)
     
     if not verify_webhook_signature(payload, signature, os.environ['WEBHOOK_SECRET']):
         return jsonify({'error': 'Invalid signature'}), 401
     
     process_webhook(request.json)
-    return jsonify({'status': 'received'})
+    # Acknowledge with { "ok": true } — required, or the delivery is retried
+    return jsonify({'ok': True})
 ```
 
 **PHP:**
-
 ```php
 <?php
 function verifyWebhookSignature($payload, $signature, $secret) {
@@ -278,7 +343,7 @@ function verifyWebhookSignature($payload, $signature, $secret) {
 
 // Slim/Laravel webhook handler
 $app->post('/webhooks/dce', function (Request $request, Response $response) {
-    $signature = $request->getHeaderLine('signature');
+    $signature = $request->getHeaderLine('X-Webhook-Signature');
     $payload = $request->getBody()->getContents();
     
     if (!verifyWebhookSignature($payload, $signature, $_ENV['WEBHOOK_SECRET'])) {
@@ -290,14 +355,14 @@ $app->post('/webhooks/dce', function (Request $request, Response $response) {
     $event = json_decode($payload, true);
     processWebhook($event);
     
-    $response->getBody()->write(json_encode(['status' => 'received']));
+    // Acknowledge with { "ok": true } — required, or the delivery is retried
+    $response->getBody()->write(json_encode(['ok' => true]));
     return $response;
 });
 ?>
 ```
 
 **Java:**
-
 ```java
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -325,9 +390,9 @@ public class WebhookVerifier {
 
 // Spring Boot webhook handler
 @PostMapping("/webhooks/dce")
-public ResponseEntity<Map<String, String>> webhook(
+public ResponseEntity<Map<String, Object>> webhook(
         @RequestBody Map<String, Object> event,
-        @RequestHeader("signature") String signature,
+        @RequestHeader("X-Webhook-Signature") String signature,
         @RequestBody String rawPayload) {
     
     if (!WebhookVerifier.verifyWebhookSignature(rawPayload, signature, System.getenv("WEBHOOK_SECRET"))) {
@@ -338,12 +403,12 @@ public ResponseEntity<Map<String, String>> webhook(
     // Process webhook
     processWebhook(event);
     
-    return ResponseEntity.ok(Map.of("status", "received"));
+    // Acknowledge with { "ok": true } — required, or the delivery is retried
+            return ResponseEntity.ok(Map.of("ok", true));
 }
 ```
 
 **C#:**
-
 ```csharp
 using System.Security.Cryptography;
 using System.Text;
@@ -365,7 +430,7 @@ public class WebhookVerifier
 [HttpPost("dce")]
 public IActionResult Webhook()
 {
-    var signature = Request.Headers["signature"].FirstOrDefault();
+    var signature = Request.Headers["X-Webhook-Signature"].FirstOrDefault();
     var payload = Request.Body.ToString();
     
     if (!WebhookVerifier.VerifyWebhookSignature(payload, signature, 
@@ -378,7 +443,8 @@ public IActionResult Webhook()
     var eventData = JsonConvert.DeserializeObject<dynamic>(payload);
     ProcessWebhook(eventData);
     
-    return Ok(new { status = "received" });
+    // Acknowledge with { "ok": true } — required, or the delivery is retried
+            return Ok(new { ok = true });
 }
 ```
 
@@ -391,38 +457,45 @@ For `deposit.confirmed` and `withdrawal.confirmed` events, the webhook payload i
 ```json
 {
   "feeCharges": {
-    "amount": "0.004",
-    "percentage": "0.05", 
-    "type": "PERCENTAGE"
+    "amount": "0.25",
+    "percentage": "0.0025",
+    "type": "PERCENTAGE",
+    "activationFee": {
+      "amount": "0.5",
+      "charged": true
+    }
   },
-  "receivableAmount": "0.076"
+  "receivableAmount": "99.25"
 }
 ```
 
 #### Fee Charges Object Properties
 
-| Property     | Type   | Description                                                    |
-| ------------ | ------ | -------------------------------------------------------------- |
-| `amount`     | string | The actual fee amount charged (in the transaction currency)    |
-| `percentage` | string | The percentage rate used for calculation (e.g., "0.05" for 5%) |
-| `type`       | string | The charge type: `PERCENTAGE`, `FIXED_AMOUNT`, or `HYBRID`     |
+| Property | Type | Description |
+|----------|------|-------------|
+| `amount` | string | The commission amount charged (in the transaction currency, e.g. USDT) |
+| `percentage` | string | The decimal rate used for calculation (e.g., "0.0025" for 0.25%); "0" for flat fees |
+| `type` | string | The charge type: `PERCENTAGE`, `FIXED_AMOUNT`, or `HYBRID` |
+| `activationFee` | object | Deposit events only: the one-time address activation fee (`amount`, `charged`) |
+
+On `withdrawal.confirmed`, `feeCharges` is present only when a withdrawal commission was charged, and contains `amount`, `percentage`, and `type` (no `activationFee`).
 
 #### Additional Fields
 
-| Property           | Type   | Description                                                             |
-| ------------------ | ------ | ----------------------------------------------------------------------- |
-| `receivableAmount` | string | The final amount after fee deduction (transaction amount - fee charges) |
+| Property | Type | Description |
+|----------|------|-------------|
+| `receivableAmount` | string | The final amount after fee deduction. Deposits: amount − (commission + activation fee), or amount − flat fee for merchant top-ups. Withdrawals: amount − commission |
+| `isMerchantDirectDeposit` | boolean | Deposit events only: `true` when the deposit is a merchant wallet top-up (flat fee instead of commission + activation fee) |
 
 #### Charge Types
 
 - **PERCENTAGE**: Fee calculated as a percentage of the transaction amount
-- **FIXED\_AMOUNT**: Fixed fee amount regardless of transaction size
+- **FIXED_AMOUNT**: Fixed fee amount regardless of transaction size
 - **HYBRID**: Combination of percentage and fixed amount
 
 #### Example Fee Calculations
 
 **Percentage-based (5%):**
-
 ```json
 {
   "amount": "100.00",
@@ -435,8 +508,7 @@ For `deposit.confirmed` and `withdrawal.confirmed` events, the webhook payload i
 }
 ```
 
-**Fixed amount ($2.50):**
-
+**Fixed amount (2.50 USDT):**
 ```json
 {
   "amount": "100.00", 
@@ -449,8 +521,7 @@ For `deposit.confirmed` and `withdrawal.confirmed` events, the webhook payload i
 }
 ```
 
-**Hybrid (2% + $1.00):**
-
+**Hybrid (2% + 1.00 USDT):**
 ```json
 {
   "amount": "100.00",
@@ -465,108 +536,105 @@ For `deposit.confirmed` and `withdrawal.confirmed` events, the webhook payload i
 
 ### Deposit Events
 
-#### deposit.confirmed
+#### deposit.confirmed (`X-Webhook-Event: deposit.confirmed`)
 
 ```json
 {
-  "event": "deposit.confirmed",
-  "txHash": "tx_1752630134805_ti0a34wjs",
-  "toAddress": "0x1234567890123456789012345678901234567890",
-  "fromAddress": "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
-  "amount": "0.08",
-  "coinSymbol": "ETH",
-  "tokenSymbol": "ETH",
-  "confirmedAt": "2024-12-19T10:30:00Z",
-  "layer": "L1Transaction",
-  "internalFee": {
-    "deposit": "0.002"
-  },
-  "feeCharges": {
-    "amount": "0.004",
-    "percentage": "0.05",
-    "type": "PERCENTAGE"
-  },
-  "receivableAmount": "0.076",
-  "receiverInfo": {
-    "identity": "AS188689e48494c8a452683587138f209d673aada204cb23393140e7f40280e0c5"
-  },
+  "type": "deposit",
+  "depositId": "clx0d3p0s1t000001",
+  "amount": "100.00",
+  "currency": "USDT",
+  "status": "confirmed",
   "identifier": "user123",
-  "depositRequest": {
-    "exchangeRate": "7.182",
-    "requestedValue": {
-      "amount": "1000",
-      "currency": "USD"
-    }
-  }
-}
-```
-
-#### deposit.failed
-
-```json
-{
-  "event": "deposit.failed",
-  "txHash": "tx_1752630135962_4vp6wefk2",
-  "toAddress": "0x1234567890123456789012345678901234567890",
-  "fromAddress": "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
-  "amount": "0.1",
-  "coinSymbol": "ETH",
-  "tokenSymbol": "ETH",
-  "failedAt": "2024-12-19T10:30:00Z",
-  "layer": "L1Transaction",
-  "reason": "Invalid destination address"
-}
-```
-
-### Payout Events
-
-#### payout.confirmed
-
-```json
-{
-  "event": "payout.confirmed",
-  "txHash": "tx_1752630134805_ti0a34wjs",
-  "toAddress": "0x1234567890123456789012345678901234567890",
-  "fromAddress": "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
-  "amount": "0.08",
-  "coinSymbol": "ETH",
-  "tokenSymbol": "ETH",
-  "confirmedAt": "2024-12-19T10:30:00Z",
-  "layer": "L1Transaction",
-  "internalFee": {
-    "withdraw": "0.002"
-  },
+  "txHash": "0x7f9fade1c0d57a7af66ab4ead79fade1c0d57a7af66ab4ead7c2c2eb7b11a91385",
+  "referenceId": "your-reference-id",
+  "address": "TX7uW4mP7cLoBnUYqkNhVpQvNczpxxxxxx",
+  "isMerchantDirectDeposit": false,
   "feeCharges": {
-    "amount": "0.004",
-    "percentage": "0.05",
-    "type": "PERCENTAGE"
+    "amount": "0.25",
+    "percentage": "0.0025",
+    "type": "PERCENTAGE",
+    "activationFee": {
+      "amount": "0.5",
+      "charged": true
+    }
   },
-  "receivableAmount": "0.076"
+  "receivableAmount": "99.25",
+  "eventId": "b3a1c2d4-0000-0000-0000-000000000000"
 }
 ```
 
-#### payout.failed
+Deposits below 1 USD equivalent are fee-exempt and do **not** produce a `deposit.confirmed` delivery.
+
+#### deposit.failed (`X-Webhook-Event: deposit.failed`)
 
 ```json
 {
-  "event": "payout.failed",
-  "txHash": "tx_1752630135962_4vp6wefk2",
-  "toAddress": "0x1234567890123456789012345678901234567890",
-  "fromAddress": "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
-  "amount": "0.1",
-  "coinSymbol": "ETH",
-  "tokenSymbol": "ETH",
-  "failedAt": "2024-12-19T10:30:00Z",
-  "layer": "L1Transaction",
-  "reason": "Invalid destination address"
+  "type": "deposit",
+  "depositId": "clx0d3p0s1t000002",
+  "amount": "100.00",
+  "currency": "USDT",
+  "identifier": "user123",
+  "status": "failed",
+  "reason": "Deposit failed",
+  "txHash": "0x7f9fade1c0d57a7af66ab4ead79fade1c0d57a7af66ab4ead7c2c2eb7b11a91385",
+  "address": "TX7uW4mP7cLoBnUYqkNhVpQvNczpxxxxxx",
+  "eventId": "b3a1c2d4-0000-0000-0000-000000000001"
 }
 ```
+
+### Withdrawal Events
+
+#### withdrawal.confirmed (`X-Webhook-Event: withdrawal.confirmed`)
+
+```json
+{
+  "type": "withdrawal",
+  "withdrawalId": "clx0w1thdr4w000001",
+  "amount": "200.00",
+  "currency": "USDT",
+  "status": "confirmed",
+  "txHash": "0x7f9fade1c0d57a7af66ab4ead79fade1c0d57a7af66ab4ead7c2c2eb7b11a91385",
+  "referenceId": "your-reference-id",
+  "address": "TX7uW4mP7cLoBnUYqkNhVpQvNczpxxxxxx",
+  "identifier": "your-reference-id",
+  "feeCharges": {
+    "amount": "1.00",
+    "percentage": "0",
+    "type": "FIXED_AMOUNT"
+  },
+  "receivableAmount": "199.00",
+  "eventId": "b3a1c2d4-0000-0000-0000-000000000002"
+}
+```
+
+`referenceId` and `identifier` carry **your** merchant `referenceId` (as submitted to `POST /api/withdrawals`), not an internal id — correlate the callback with your original request on it.
+
+#### withdrawal.failed (`X-Webhook-Event: withdrawal.failed`)
+
+```json
+{
+  "type": "withdrawal",
+  "withdrawalId": "clx0w1thdr4w000002",
+  "amount": "200.00",
+  "currency": "USDT",
+  "status": "failed",
+  "reason": "Withdrawal failed",
+  "txHash": "0x7f9fade1c0d57a7af66ab4ead79fade1c0d57a7af66ab4ead7c2c2eb7b11a91385",
+  "referenceId": "your-reference-id",
+  "address": "TX7uW4mP7cLoBnUYqkNhVpQvNczpxxxxxx",
+  "identifier": "your-reference-id",
+  "eventId": "b3a1c2d4-0000-0000-0000-000000000003"
+}
+```
+
+On failure, the reserved balance (amount + commission + network fee) is refunded and your `referenceId` is released for reuse in a fresh submission.
 
 ## Webhook Processing
 
 ### Idempotency
 
-Implement idempotency to prevent duplicate processing:
+Delivery is at-least-once, so implement idempotency to prevent duplicate processing. Every payload carries a stable `eventId` (also sent as the `X-Webhook-Id` header) that is identical on every redelivery of the same event — deduplicate on it:
 
 ```javascript
 class WebhookProcessor {
@@ -574,8 +642,8 @@ class WebhookProcessor {
     this.processedEvents = new Set();
   }
   
-  async processWebhook(event) {
-    const eventId = `${event.txHash}-${event.event}`;
+  async processWebhook(eventName, event) {
+    const eventId = event.eventId; // stable across redeliveries
     
     // Check if already processed
     if (this.processedEvents.has(eventId)) {
@@ -584,7 +652,7 @@ class WebhookProcessor {
     }
     
     // Process the event
-    await this.handleEvent(event);
+    await this.handleEvent(eventName, event);
     
     // Mark as processed
     this.processedEvents.add(eventId);
@@ -592,22 +660,23 @@ class WebhookProcessor {
     return { status: 'processed' };
   }
   
-  async handleEvent(event) {
-    switch (event.event) {
+  async handleEvent(eventName, event) {
+    // eventName comes from the X-Webhook-Event header
+    switch (eventName) {
       case 'deposit.confirmed':
         await this.handleDepositConfirmed(event);
         break;
       case 'deposit.failed':
         await this.handleDepositFailed(event);
         break;
-      case 'payout.confirmed':
-        await this.handlePayoutConfirmed(event);
+      case 'withdrawal.confirmed':
+        await this.handleWithdrawalConfirmed(event);
         break;
-      case 'payout.failed':
-        await this.handlePayoutFailed(event);
+      case 'withdrawal.failed':
+        await this.handleWithdrawalFailed(event);
         break;
       default:
-        console.log(`Unknown event type: ${event.event}`);
+        console.log(`Unknown event type: ${eventName}`);
     }
   }
 }
@@ -689,12 +758,14 @@ app.post('/webhooks/dce', async (req, res) => {
     // Process webhook
     await webhookProcessor.processWebhook(req.body);
     
-    res.json({ status: 'received' });
+    // Acknowledge with { ok: true } — required, or the delivery is retried
+    res.json({ ok: true });
   } catch (error) {
     console.error('Webhook processing error:', error);
     
-    // Return 200 to prevent retries for processing errors
-    res.status(200).json({ 
+    // Anything without { ok: true } is retried — return an error status so
+    // the redelivery (same eventId) can be processed once the issue is fixed
+    res.status(500).json({ 
       status: 'error',
       error: error.message 
     });
@@ -1276,11 +1347,17 @@ class IdempotentWebhookProcessor {
   }
 
   generateEventId(event) {
-    // Create unique ID based on event characteristics
+    // DCE payloads carry a stable `eventId` (also in the X-Webhook-Id header)
+    // that is identical on every redelivery — always prefer it.
+    if (event.eventId) {
+      return event.eventId;
+    }
+
+    // Fallback for payloads from other sources
     const components = [
-      event.event,
-      event.txHash || event.correlationId,
-      event.timestamp
+      event.type,
+      event.status,
+      event.txHash
     ];
     
     return require('crypto')
@@ -1486,7 +1563,7 @@ class WebhookTester {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Signature': this.generateSignature(event)
+        'X-Webhook-Signature': this.generateSignature(event)
       },
       body: JSON.stringify(event)
     });
@@ -1505,11 +1582,12 @@ class WebhookTester {
       .digest('hex');
   }
   
-  createTestEvent(type, data = {}) {
+  createTestEvent(eventName, data = {}) {
+    const [type, status] = eventName.split('.');
     return {
-      event: type,
-      timestamp: new Date().toISOString(),
-      correlationId: `test-${Date.now()}`,
+      type,
+      status,
+      eventId: `test-${Date.now()}`,
       ...data
     };
   }
@@ -1518,9 +1596,11 @@ class WebhookTester {
 // Usage
 const tester = new WebhookTester();
 const testEvent = tester.createTestEvent('deposit.confirmed', {
+  depositId: 'test_deposit_id',
   txHash: 'test_tx_hash',
-  amount: '0.1',
-  toAddress: '0x1234567890123456789012345678901234567890'
+  amount: '100.00',
+  currency: 'USDT',
+  address: 'TX7uW4mP7cLoBnUYqkNhVpQvNczpxxxxxx'
 });
 
 const result = await tester.testWebhookEndpoint('https://your-domain.com/webhooks/dce', testEvent);
@@ -1664,7 +1744,8 @@ class WebhookHandler {
         processingTime: Date.now() - startTime
       });
       
-      res.json({ status: 'received' });
+      // Acknowledge with { ok: true } — required, or the delivery is retried
+      res.json({ ok: true });
     } catch (error) {
       // Log error
       await this.logger.logWebhook(req.body, {
@@ -1673,7 +1754,7 @@ class WebhookHandler {
         error: error.message
       });
       
-      res.status(200).json({ 
+      res.status(500).json({ 
         status: 'error',
         error: error.message 
       });
@@ -1681,7 +1762,7 @@ class WebhookHandler {
   }
   
   verifySignature(req) {
-    const signature = req.headers['signature'];
+    const signature = req.headers['x-webhook-signature'];
     const payload = JSON.stringify(req.body);
     
     const expectedSignature = crypto
@@ -1726,12 +1807,13 @@ class WebhookHandler:
         return hmac.compare_digest(signature, expected_signature)
     
     def process_webhook(self, event):
-        event_type = event.get('event')
+        # Event name from the X-Webhook-Event header, or derived from the body
+        event_type = f"{event.get('type')}.{event.get('status')}"
         
         if event_type == 'deposit.confirmed':
             return self.handle_deposit_confirmed(event)
-        elif event_type == 'payout.confirmed':
-            return self.handle_payout_confirmed(event)
+        elif event_type == 'withdrawal.confirmed':
+            return self.handle_withdrawal_confirmed(event)
         else:
             print(f"Unknown event type: {event_type}")
             return {'status': 'ignored'}
@@ -1742,7 +1824,7 @@ class WebhookHandler:
         # Send notification
         return {'status': 'processed'}
     
-    def handle_payout_confirmed(self, event):
+    def handle_withdrawal_confirmed(self, event):
         # Update withdrawal status
         # Send confirmation email
         return {'status': 'processed'}
@@ -1753,7 +1835,7 @@ handler = WebhookHandler()
 def webhook_endpoint():
     try:
         # Verify signature
-        signature = request.headers.get('Signature')
+        signature = request.headers.get('X-Webhook-Signature')
         payload = request.get_data(as_text=True)
         
         if not handler.verify_signature(payload, signature):
@@ -1763,17 +1845,17 @@ def webhook_endpoint():
         event = request.json
         result = handler.process_webhook(event)
         
-        return jsonify({'status': 'received'})
+        # Acknowledge with { "ok": true } — required, or the delivery is retried
+        return jsonify({'ok': True})
     except Exception as e:
         print(f"Webhook processing error: {e}")
-        return jsonify({'status': 'error', 'error': str(e)}), 200
+        return jsonify({'status': 'error', 'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
 ```
 
 ### Node.js (Express):
-
 ```javascript
 const express = require('express');
 const crypto = require('crypto');
@@ -1795,9 +1877,12 @@ function verifyWebhookSignature(payload, signature, secret) {
 }
 
 function processWebhook(event) {
-  console.log('Processing webhook:', event.event);
+  // The event name arrives in the X-Webhook-Event header; it can also be
+  // derived from the body as `${event.type}.${event.status}`.
+  const eventName = `${event.type}.${event.status}`;
+  console.log('Processing webhook:', eventName);
   
-  switch (event.event) {
+  switch (eventName) {
     case 'deposit.confirmed':
       console.log('Deposit confirmed:', event.txHash);
       // Update database, send confirmation email, etc.
@@ -1806,22 +1891,22 @@ function processWebhook(event) {
       console.log('Deposit failed:', event.reason);
       // Handle failed deposit
       break;
-    case 'payout.confirmed':
-      console.log('Payout confirmed:', event.txHash);
+    case 'withdrawal.confirmed':
+      console.log('Withdrawal confirmed:', event.txHash);
       // Update withdrawal status
       break;
-    case 'payout.failed':
-      console.log('Payout failed:', event.reason);
-      // Handle failed payout
+    case 'withdrawal.failed':
+      console.log('Withdrawal failed:', event.reason);
+      // Handle failed withdrawal
       break;
     default:
-      console.log('Unknown event type:', event.event);
+      console.log('Unknown event type:', eventName);
   }
 }
 
 app.post('/webhooks/dce', (req, res) => {
   try {
-    const signature = req.headers['signature'];
+    const signature = req.headers['x-webhook-signature'];
     const payload = JSON.stringify(req.body);
     
     if (!verifyWebhookSignature(payload, signature, process.env.WEBHOOK_SECRET)) {
@@ -1829,7 +1914,8 @@ app.post('/webhooks/dce', (req, res) => {
     }
     
     processWebhook(req.body);
-    res.json({ status: 'received' });
+    // Acknowledge with { ok: true } — required, or the delivery is retried
+    res.json({ ok: true });
   } catch (error) {
     console.error('Webhook error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -1842,7 +1928,6 @@ app.listen(3000, () => {
 ```
 
 ### Python (Flask):
-
 ```python
 from flask import Flask, request, jsonify
 import hmac
@@ -1863,34 +1948,37 @@ def verify_webhook_signature(payload, signature, secret):
     return hmac.compare_digest(signature, expected_signature)
 
 def process_webhook(event):
-    print(f"Processing webhook: {event['event']}")
+    # Event name comes from the X-Webhook-Event header, or derive it from the body
+    event_name = f"{event['type']}.{event['status']}"
+    print(f"Processing webhook: {event_name}")
     
-    if event['event'] == 'deposit.confirmed':
+    if event_name == 'deposit.confirmed':
         print(f"Deposit confirmed: {event['txHash']}")
         # Update database, send confirmation email, etc.
-    elif event['event'] == 'deposit.failed':
+    elif event_name == 'deposit.failed':
         print(f"Deposit failed: {event['reason']}")
         # Handle failed deposit
-    elif event['event'] == 'payout.confirmed':
-        print(f"Payout confirmed: {event['txHash']}")
+    elif event_name == 'withdrawal.confirmed':
+        print(f"Withdrawal confirmed: {event['txHash']}")
         # Update withdrawal status
-    elif event['event'] == 'payout.failed':
-        print(f"Payout failed: {event['reason']}")
-        # Handle failed payout
+    elif event_name == 'withdrawal.failed':
+        print(f"Withdrawal failed: {event['reason']}")
+        # Handle failed withdrawal
     else:
-        print(f"Unknown event type: {event['event']}")
+        print(f"Unknown event type: {event_name}")
 
 @app.route('/webhooks/dce', methods=['POST'])
 def webhook():
     try:
-        signature = request.headers.get('signature')
+        signature = request.headers.get('X-Webhook-Signature')
         payload = request.get_data(as_text=True)
         
         if not verify_webhook_signature(payload, signature, os.getenv('WEBHOOK_SECRET')):
             return jsonify({'error': 'Invalid signature'}), 401
         
         process_webhook(request.json)
-        return jsonify({'status': 'received'})
+        # Acknowledge with { "ok": true } — required, or the delivery is retried
+        return jsonify({'ok': True})
     except Exception as e:
         print('Webhook error:', e)
         return jsonify({'error': 'Internal server error'}), 500
@@ -1900,7 +1988,6 @@ if __name__ == '__main__':
 ```
 
 ### PHP (Laravel/Slim):
-
 ```php
 <?php
 require 'vendor/autoload.php';
@@ -1918,9 +2005,11 @@ function verifyWebhookSignature($payload, $signature, $secret) {
 }
 
 function processWebhook($event) {
-    echo "Processing webhook: " . $event['event'] . "\n";
+    // Event name comes from the X-Webhook-Event header, or derive it from the body
+    $eventName = $event['type'] . '.' . $event['status'];
+    echo "Processing webhook: " . $eventName . "\n";
     
-    switch ($event['event']) {
+    switch ($eventName) {
         case 'deposit.confirmed':
             echo "Deposit confirmed: " . $event['txHash'] . "\n";
             // Update database, send confirmation email, etc.
@@ -1929,22 +2018,22 @@ function processWebhook($event) {
             echo "Deposit failed: " . $event['reason'] . "\n";
             // Handle failed deposit
             break;
-        case 'payout.confirmed':
-            echo "Payout confirmed: " . $event['txHash'] . "\n";
+        case 'withdrawal.confirmed':
+            echo "Withdrawal confirmed: " . $event['txHash'] . "\n";
             // Update withdrawal status
             break;
-        case 'payout.failed':
-            echo "Payout failed: " . $event['reason'] . "\n";
-            // Handle failed payout
+        case 'withdrawal.failed':
+            echo "Withdrawal failed: " . $event['reason'] . "\n";
+            // Handle failed withdrawal
             break;
         default:
-            echo "Unknown event type: " . $event['event'] . "\n";
+            echo "Unknown event type: " . $eventName . "\n";
     }
 }
 
 $app->post('/webhooks/dce', function (Request $request, Response $response) {
     try {
-        $signature = $request->getHeaderLine('signature');
+        $signature = $request->getHeaderLine('X-Webhook-Signature');
         $payload = $request->getBody()->getContents();
         
         if (!verifyWebhookSignature($payload, $signature, $_ENV['WEBHOOK_SECRET'])) {
@@ -1955,7 +2044,8 @@ $app->post('/webhooks/dce', function (Request $request, Response $response) {
         $event = json_decode($payload, true);
         processWebhook($event);
         
-        $response->getBody()->write(json_encode(['status' => 'received']));
+        // Acknowledge with { "ok": true } — required, or the delivery is retried
+    $response->getBody()->write(json_encode(['ok' => true]));
         return $response;
     } catch (Exception $e) {
         echo "Webhook error: " . $e->getMessage() . "\n";
@@ -1969,7 +2059,6 @@ $app->run();
 ```
 
 ### Java (Spring Boot):
-
 ```java
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -2004,7 +2093,8 @@ public class WebhookController {
     }
     
     private void processWebhook(Map<String, Object> event) {
-        String eventType = (String) event.get("event");
+        // Event name from the X-Webhook-Event header, or derived from the body
+        String eventType = event.get("type") + "." + event.get("status");
         System.out.println("Processing webhook: " + eventType);
         
         switch (eventType) {
@@ -2016,13 +2106,13 @@ public class WebhookController {
                 System.out.println("Deposit failed: " + event.get("reason"));
                 // Handle failed deposit
                 break;
-            case "payout.confirmed":
-                System.out.println("Payout confirmed: " + event.get("txHash"));
+            case "withdrawal.confirmed":
+                System.out.println("Withdrawal confirmed: " + event.get("txHash"));
                 // Update withdrawal status
                 break;
-            case "payout.failed":
-                System.out.println("Payout failed: " + event.get("reason"));
-                // Handle failed payout
+            case "withdrawal.failed":
+                System.out.println("Withdrawal failed: " + event.get("reason"));
+                // Handle failed withdrawal
                 break;
             default:
                 System.out.println("Unknown event type: " + eventType);
@@ -2030,9 +2120,9 @@ public class WebhookController {
     }
     
     @PostMapping("/webhooks/dce")
-    public ResponseEntity<Map<String, String>> webhook(
+    public ResponseEntity<Map<String, Object>> webhook(
             @RequestBody Map<String, Object> event,
-            @RequestHeader("signature") String signature,
+            @RequestHeader("X-Webhook-Signature") String signature,
             @RequestBody String rawPayload) {
         
         try {
@@ -2042,7 +2132,8 @@ public class WebhookController {
             }
             
             processWebhook(event);
-            return ResponseEntity.ok(Map.of("status", "received"));
+            // Acknowledge with { "ok": true } — required, or the delivery is retried
+            return ResponseEntity.ok(Map.of("ok", true));
         } catch (Exception e) {
             System.err.println("Webhook error: " + e.getMessage());
             return ResponseEntity.status(500)
@@ -2057,7 +2148,6 @@ public class WebhookController {
 ```
 
 ### C# (.NET):
-
 ```csharp
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Cryptography;
@@ -2082,7 +2172,8 @@ public class WebhookController : ControllerBase
     
     private void ProcessWebhook(dynamic eventData)
     {
-        string eventType = eventData.event;
+        // Event name from the X-Webhook-Event header, or derived from the body
+        string eventType = (string)eventData.type + "." + (string)eventData.status;
         Console.WriteLine($"Processing webhook: {eventType}");
         
         switch (eventType)
@@ -2095,13 +2186,13 @@ public class WebhookController : ControllerBase
                 Console.WriteLine($"Deposit failed: {eventData.reason}");
                 // Handle failed deposit
                 break;
-            case "payout.confirmed":
-                Console.WriteLine($"Payout confirmed: {eventData.txHash}");
+            case "withdrawal.confirmed":
+                Console.WriteLine($"Withdrawal confirmed: {eventData.txHash}");
                 // Update withdrawal status
                 break;
-            case "payout.failed":
-                Console.WriteLine($"Payout failed: {eventData.reason}");
-                // Handle failed payout
+            case "withdrawal.failed":
+                Console.WriteLine($"Withdrawal failed: {eventData.reason}");
+                // Handle failed withdrawal
                 break;
             default:
                 Console.WriteLine($"Unknown event type: {eventType}");
@@ -2114,7 +2205,7 @@ public class WebhookController : ControllerBase
     {
         try
         {
-            var signature = Request.Headers["signature"].FirstOrDefault();
+            var signature = Request.Headers["X-Webhook-Signature"].FirstOrDefault();
             var payload = Request.Body.ToString();
             
             if (!VerifyWebhookSignature(payload, signature))
@@ -2125,7 +2216,8 @@ public class WebhookController : ControllerBase
             var eventData = JsonConvert.DeserializeObject<dynamic>(payload);
             ProcessWebhook(eventData);
             
-            return Ok(new { status = "received" });
+            // Acknowledge with { "ok": true } — required, or the delivery is retried
+            return Ok(new { ok = true });
         }
         catch (Exception ex)
         {
@@ -2136,6 +2228,6 @@ public class WebhookController : ControllerBase
 }
 ```
 
-***
+---
 
-_For more information about specific event types, see the [Deposits](deposits.md) and [Withdrawals](withdrawals.md) documentation._
+*For more information about specific event types, see the [Deposits](https://docs.dcepay.io/docs/deposits) and [Withdrawals](https://docs.dcepay.io/docs/withdrawals) documentation.* 

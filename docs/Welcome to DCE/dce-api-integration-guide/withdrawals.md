@@ -11,10 +11,22 @@ The withdrawals API allows you to process payouts to customers and external addr
 
 The withdrawal flow consists of these steps:
 
-1. **Validate balance** - Ensure sufficient funds are available
-2. **Create withdrawal** - Submit withdrawal request with destination address
+1. **Validate balance** - Ensure sufficient funds are available on the chain you are withdrawing from
+2. **Create withdrawal** - Submit withdrawal request with destination address and network
 3. **Monitor status** - Track withdrawal processing via webhooks and API calls
 4. **Handle confirmations** - Process completed withdrawals in your system
+
+### Supported currencies and networks
+
+Balances are segmented per `(currency, network)` pair. There is **no cross-chain fungibility**: a withdrawal draws only from the balance on the same network.
+
+| Currency | Network | Status |
+|----------|---------|--------|
+| `USDT` | `TRX` (Tron) | **Available** |
+| `USDT` | `TRX_SHASTA` (Tron testnet) | Available (staging/testing) |
+| `USDT` / `USDC` | `ETH`, `BNB`, `SOL` | Coming soon / on request |
+
+Requests referencing a disabled `(currency, network)` pair are rejected with `400` and an error such as `"Withdrawals of USDT on ETH are not supported"`.
 
 ## Creating Withdrawals
 
@@ -29,49 +41,59 @@ curl -X POST "https://api.dcepay.io/api/withdrawals" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "token": "BTC",
-    "amount": 0.001,
-    "address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
-    "metadata": {
-      "orderId": "order_123",
-      "customerEmail": "customer@example.com"
-    }
+    "amount": "100.50",
+    "currency": "USDT",
+    "network": "TRX",
+    "destination": "TXYZa1b2c3d4e5f6g7h8i9j0k1l2m3n4o5",
+    "description": "Payout for order 123",
+    "referenceId": "order_123"
   }'
 ```
 
 #### Request Parameters
 
-| Parameter  | Type   | Required | Description                                      |
-| ---------- | ------ | -------- | ------------------------------------------------ |
-| `token`    | string | Yes      | Cryptocurrency symbol (BTC, ETH, USDT, etc.)     |
-| `amount`   | number | Yes      | Amount to withdraw                               |
-| `address`  | string | Yes      | Destination address for the withdrawal           |
-| `metadata` | object | No       | Additional data to associate with the withdrawal |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `amount` | string | Yes | Amount to withdraw as a positive decimal string (up to 18 decimal places), e.g. `"100.50"` |
+| `currency` | string | Yes | Token symbol: `USDT` or `USDC` |
+| `network` | string | Yes | Network symbol: `TRX`, `ETH`, `BNB`, `SOL` (testnets: `TRX_SHASTA`, `SEP`, `tBNB`, `SOL_DEVNET`). Currently only `TRX` is enabled for `USDT` |
+| `destination` | string | Yes | Destination address for the withdrawal |
+| `description` | string | No | Free-text description for the withdrawal |
+| `referenceId` | string | No | Your own reference for this withdrawal. **Unique per merchant** — reusing a `referenceId` never creates a second payout (see [Idempotency](#3-idempotency-with-referenceid)) |
 
 #### Response
 
 ```json
 {
-  "id": "wth_xxxxxxxxxxxxxxxx",
-  "token": "BTC",
-  "amount": 0.001,
-  "address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
-  "status": "pending",
-  "fee": 0.00001,
-  "netAmount": 0.00099,
-  "createdAt": "2024-12-19T10:30:00Z",
-  "estimatedCompletion": "2024-12-19T11:30:00Z",
-  "metadata": {
-    "orderId": "order_123",
-    "customerEmail": "customer@example.com"
+  "success": true,
+  "message": "Withdrawal request received and will begin processing",
+  "withdrawalId": "cmdl8u2xq0001abcd1234efgh",
+  "status": "PENDING",
+  "amount": "100.5",
+  "currency": "USDT",
+  "network": "TRX",
+  "destination": "TXYZa1b2c3d4e5f6g7h8i9j0k1l2m3n4o5",
+  "feeInfo": {
+    "grossAmount": "100.5",
+    "netAmount": "98.5",
+    "totalFees": "2",
+    "feeBreakdown": {
+      "baseFee": "1",
+      "markupRate": "0",
+      "markupAmount": "1",
+      "networkFee": "1",
+      "totalFee": "2"
+    }
   }
 }
 ```
 
+> **Important:** fees are charged **on top of** the withdrawal amount. The destination address receives the full `amount`; your balance is debited `amount + commission + networkFee`. Make sure your available balance covers the total, not just the amount.
+
 #### JavaScript Example
 
 ```javascript
-async function createWithdrawal(token, amount, address, metadata = {}) {
+async function createWithdrawal(currency, network, amount, destination, referenceId) {
   const response = await fetch('https://api.dcepay.io/api/withdrawals', {
     method: 'POST',
     headers: {
@@ -79,29 +101,28 @@ async function createWithdrawal(token, amount, address, metadata = {}) {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      token,
-      amount,
-      address,
-      metadata
+      currency,
+      network,
+      amount,     // decimal string, e.g. "100.50"
+      destination,
+      referenceId
     })
   });
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(`Withdrawal creation failed: ${error.message}`);
+    throw new Error(`Withdrawal creation failed: ${error.message || error.error}`);
   }
 
   return response.json();
 }
 
 // Usage
-const withdrawal = await createWithdrawal('BTC', 0.001, 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh', {
-  orderId: 'order_123',
-  customerEmail: 'customer@example.com'
-});
+const withdrawal = await createWithdrawal('USDT', 'TRX', '100.50',
+  'TXYZa1b2c3d4e5f6g7h8i9j0k1l2m3n4o5', 'order_123');
 
-console.log('Withdrawal ID:', withdrawal.id);
-console.log('Net amount (after fees):', withdrawal.netAmount);
+console.log('Withdrawal ID:', withdrawal.withdrawalId);
+console.log('Total fees (charged on top):', withdrawal.feeInfo.totalFees);
 ```
 
 ## Listing Withdrawals
@@ -119,14 +140,11 @@ curl -X GET "https://api.dcepay.io/api/withdrawals?status=CONFIRMED&page=1&limit
 
 #### Query Parameters
 
-| Parameter   | Type   | Description                                               |
-| ----------- | ------ | --------------------------------------------------------- |
-| `status`    | string | Filter by status (pending, processing, confirmed, failed) |
-| `token`     | string | Filter by cryptocurrency                                  |
-| `limit`     | number | Number of results to return (default: 20, max: 100)       |
-| `offset`    | number | Number of results to skip for pagination                  |
-| `startDate` | string | Filter withdrawals created after this date (ISO 8601)     |
-| `endDate`   | string | Filter withdrawals created before this date (ISO 8601)    |
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | string | Filter by status (`PENDING`, `CONFIRMED`, `FAILED`, `CANCELLED`) |
+| `page` | number | Page number (default: 1) |
+| `limit` | number | Number of results per page (default: 10, max: 100) |
 
 #### Response
 
@@ -134,34 +152,32 @@ curl -X GET "https://api.dcepay.io/api/withdrawals?status=CONFIRMED&page=1&limit
 {
   "withdrawals": [
     {
-      "id": "wth_xxxxxxxxxxxxxxxx",
-      "token": "BTC",
-      "amount": 0.001,
-      "address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
-      "status": "confirmed",
-      "fee": 0.00001,
-      "netAmount": 0.00099,
-      "txHash": "0x1234567890abcdef...",
-      "confirmedAt": "2024-12-19T11:45:00Z",
-      "createdAt": "2024-12-19T10:30:00Z",
-      "metadata": {
-        "orderId": "order_123",
-        "customerEmail": "customer@example.com"
-      }
+      "id": "cmdl8u2xq0001abcd1234efgh",
+      "amount": "100.5",
+      "currency": "USDT",
+      "status": "CONFIRMED",
+      "createdAt": "2026-07-19T10:30:00Z",
+      "destination": "TXYZa1b2c3d4e5f6g7h8i9j0k1l2m3n4o5",
+      "processedAt": "2026-07-19T10:31:12Z",
+      "network": "TRX",
+      "description": "Payout for order 123",
+      "fee": "0",
+      "commission": "1",
+      "commissionRate": "0"
     }
   ],
   "pagination": {
     "total": 75,
+    "page": 1,
     "limit": 10,
-    "offset": 0,
-    "hasMore": true
+    "pages": 8
   }
 }
 ```
 
 ## Balance Validation
 
-Before creating a withdrawal, always check your available balance:
+Before creating a withdrawal, always check your available balance **on the network you are withdrawing from**:
 
 ### GET /api/balance
 
@@ -172,29 +188,31 @@ curl -X GET "https://api.dcepay.io/api/balance" \
 
 #### Response
 
+Balances are returned per `(currency, network)` pair, together with the current network fee and the maximum withdrawable amount after fees:
+
 ```json
 {
   "balances": [
     {
-      "token": "BTC",
-      "available": 0.005,
-      "pending": 0.001,
-      "total": 0.006
-    },
-    {
-      "token": "ETH",
-      "available": 0.1,
-      "pending": 0.02,
-      "total": 0.12
+      "currency": "USDT",
+      "network": "TRX",
+      "available": "250.75",
+      "pending": "10",
+      "withdrawalEnabled": true,
+      "networkFee": "1",
+      "maxWithdrawable": "249.75",
+      "lastUpdatedAt": "2026-07-19T10:30:00Z"
     }
   ]
 }
 ```
 
+You can also query a single pair with `?currency=USDT&network=TRX`, which returns one object (`currency`, `network`, `available`, `pending`, `lastUpdatedAt`).
+
 #### Balance Validation Example
 
 ```javascript
-async function validateWithdrawalBalance(token, amount) {
+async function validateWithdrawalBalance(currency, network, amount) {
   const response = await fetch('https://api.dcepay.io/api/balance', {
     headers: {
       'Authorization': `Bearer ${process.env.DCE_API_KEY}`
@@ -202,26 +220,18 @@ async function validateWithdrawalBalance(token, amount) {
   });
 
   const { balances } = await response.json();
-  const balance = balances.find(b => b.token === token);
+  const balance = balances.find(b => b.currency === currency && b.network === network);
 
   if (!balance) {
-    throw new Error(`No balance found for ${token}`);
+    throw new Error(`No ${currency} balance on ${network}`);
   }
 
-  if (balance.available < amount) {
-    throw new Error(`Insufficient balance. Available: ${balance.available} ${token}, Requested: ${amount} ${token}`);
+  // Remember: total debit = amount + commission + networkFee
+  if (parseFloat(balance.maxWithdrawable) < parseFloat(amount)) {
+    throw new Error(`Insufficient balance on ${network}. Max withdrawable: ${balance.maxWithdrawable} ${currency}`);
   }
 
   return true;
-}
-
-// Usage
-try {
-  await validateWithdrawalBalance('BTC', 0.001);
-  const withdrawal = await createWithdrawal('BTC', 0.001, 'address...');
-  console.log('Withdrawal created:', withdrawal.id);
-} catch (error) {
-  console.error('Withdrawal failed:', error.message);
 }
 ```
 
@@ -229,72 +239,80 @@ try {
 
 ### Status Values
 
-| Status       | Description                                                   |
-| ------------ | ------------------------------------------------------------- |
-| `pending`    | Withdrawal created, waiting for processing                    |
-| `processing` | Withdrawal is being processed by the network                  |
-| `confirmed`  | Withdrawal completed and confirmed on blockchain              |
-| `failed`     | Withdrawal failed (insufficient funds, invalid address, etc.) |
-| `cancelled`  | Withdrawal was cancelled                                      |
+| Status | Description |
+|--------|-------------|
+| `PENDING` | Withdrawal created and submitted, funds reserved, waiting for on-chain confirmation |
+| `CONFIRMED` | Withdrawal completed and confirmed on the blockchain |
+| `FAILED` | Withdrawal failed — the reserved amount (including fees) is returned to your balance |
+| `CANCELLED` | Withdrawal was cancelled |
 
 ### Status Transitions
 
-```text
-pending → processing (when withdrawal starts)
-processing → confirmed (when blockchain confirms)
-pending → failed (if validation fails)
-processing → failed (if network issues occur)
 ```
+PENDING → CONFIRMED (when the payout is submitted and confirmed on-chain)
+PENDING → FAILED (if payout initiation or on-chain processing fails)
+```
+
+When a withdrawal fails, the full reserved amount (`amount + commission + networkFee`) is released back to your available balance, and your `referenceId` is freed for reuse on a retry.
 
 ## Fee Structure
 
-Withdrawals incur fees that are deducted from the withdrawal amount. The fee structure consists of a base fee (1 USDT) plus an optional markup rate.
+Withdrawal fees are charged **on top of** the withdrawal amount. Every withdrawal is debited:
+
+```
+total debit = amount + commission + networkFee
+```
+
+- **Commission** — your merchant withdrawal fee. Either a percentage of the amount (if a percentage rate is configured for your account) or a flat per-network fee in token units. Minimum commission: 0.10 USDT.
+- **Network fee** — a per-`(currency, network)` fee quoted at submission time from the platform's asset matrix. The fee quoted at submission is what you pay, even if the finalized on-chain cost differs.
+
+### Per-network flat fees
+
+Default flat commission per network (token units) — your account may have custom values:
+
+| Network | Default flat fee |
+|---------|------------------|
+| `TRX` | 1 |
+| `ETH` | 2 |
+| `BNB` | 0.2 |
+| `SOL` | 0.2 |
+
+Testnets mirror their mainnet fee.
 
 ### Fee Calculation
 
-The withdrawal fee is calculated as follows:
-
-- **Base Fee**: 1 USDT (fixed)
-- **Markup Rate**: Optional percentage markup on the withdrawal amount
-- **Total Fee**: Base Fee + (Withdrawal Amount × Markup Rate)
-
 ```javascript
-// Example fee calculations
-const baseFee = 1; // USDT
-const markupRate = 0.05; // 5%
-
-// For a 100 USDT withdrawal with 5% markup:
-const withdrawalAmount = 100;
-const markupAmount = withdrawalAmount * markupRate; // 5 USDT
-const totalFee = baseFee + markupAmount; // 6 USDT
-const netAmount = withdrawalAmount - totalFee; // 94 USDT
-
-// For a 100 USDT withdrawal with no markup:
-const totalFeeNoMarkup = baseFee; // 1 USDT
-const netAmountNoMarkup = withdrawalAmount - totalFeeNoMarkup; // 99 USDT
+// For a 100 USDT withdrawal on TRX with a 1 USDT flat commission
+// and a 1 USDT network fee:
+const amount = 100;
+const commission = 1;   // flat per-network fee (or amount × rate if percentage)
+const networkFee = 1;   // quoted from the asset matrix at submission
+const totalDebit = amount + commission + networkFee; // 102 USDT debited
+// Destination receives the full 100 USDT
 ```
 
 ### System Configuration
 
-Withdrawal fees are configured internally by system administrators and cannot be modified via the API. The fee structure is determined by:
+Withdrawal fees are configured internally by system administrators and cannot be modified via the merchant API. The fee resolution order is:
 
-- **Base Fee**: Configurable system setting (default: 1 USDT)
-- **Markup Rate**: Configurable system setting (default: 0% - no markup)
-- **Fee Status**: Can be enabled/disabled by administrators
+1. **Merchant percentage rate** — if configured, `commission = amount × rate` (clamped to your account's min/max charge limits)
+2. **Merchant per-network flat fee** — flat fee in token units for the specific `(currency, network)` pair
+3. **Merchant legacy flat fee** — single flat fee if no per-network fee is set
+4. **System defaults** — system percentage or system base fee
+
+A minimum commission of 0.10 USDT applies in all cases (unless withdrawal fees are disabled system-wide).
 
 #### Admin API for Fee Management
 
-Administrators can manage withdrawal fee settings using the admin API:
+Administrators can manage system-level withdrawal fee settings:
 
 **Get Current Settings:**
-
 ```bash
 GET /api/admin/withdrawal-fees
 Authorization: Bearer <admin-api-key>
 ```
 
 **Update Settings:**
-
 ```bash
 POST /api/admin/withdrawal-fees
 Authorization: Bearer <admin-api-key>
@@ -307,123 +325,150 @@ Content-Type: application/json
 }
 ```
 
-**Test Fee Calculation:**
-
-```bash
-PUT /api/admin/withdrawal-fees
-Authorization: Bearer <admin-api-key>
-Content-Type: application/json
-
-{
-  "amount": "100",
-  "currency": "USDT"
-}
-```
-
 ### Fee Information in Response
 
-The withdrawal API response includes detailed fee information:
+The withdrawal API response includes detailed fee information in `feeInfo`:
 
 ```json
 {
-  "success": true,
-  "withdrawalId": "wth_xxxxxxxxxxxxxxxx",
-  "amount": "100.00",
-  "currency": "USDT",
   "feeInfo": {
-    "grossAmount": "100.00",
-    "netAmount": "94.00",
-    "totalFees": "6.00",
+    "grossAmount": "100",
+    "netAmount": "98",
+    "totalFees": "2",
     "feeBreakdown": {
-      "baseFee": "1.00",
-      "markupRate": "5.00",
-      "markupAmount": "5.00",
-      "totalFee": "6.00"
-    },
-    "feePercentage": "6.00"
+      "baseFee": "1",
+      "markupRate": "0",
+      "markupAmount": "1",
+      "networkFee": "1",
+      "totalFee": "2"
+    }
   }
 }
 ```
 
+| Field | Description |
+|-------|-------------|
+| `feeBreakdown.baseFee` / `markupAmount` | The commission charged for this withdrawal |
+| `feeBreakdown.markupRate` | The percentage rate applied (`0` when the commission is flat) |
+| `feeBreakdown.networkFee` | The per-network fee quoted at submission |
+| `feeBreakdown.totalFee` / `totalFees` | `commission + networkFee` — charged on top of `amount` |
+
+## Reseller Payouts
+
+If your API key belongs to a **reseller** account, withdrawals behave differently:
+
+- The destination is pinned to your registered withdrawal address — a mismatched `destination` or `network` is rejected with `400`.
+- The payout requires admin approval: funds are reserved immediately and the response returns `"status": "PENDING_APPROVAL"` with the message `"Withdrawal request received and is awaiting admin approval"`. The on-chain payout is submitted only after approval.
+
 ## Webhook Notifications
 
-You'll receive webhook notifications when withdrawal status changes:
+You'll receive webhook notifications when withdrawal status changes. Delivery is **at-least-once** (durable outbox with retries) — deduplicate using the `eventId` field, and acknowledge with a JSON body of `{ "ok": true }`. The event type is carried in the `X-Webhook-Event` header.
+
+The `referenceId` (and `identifier`) in callback payloads is **your own merchant `referenceId`** from the original request — not the internal withdrawal id — so you can correlate the callback with the withdrawal you submitted. The internal id is provided separately as `withdrawalId`.
 
 ### Withdrawal Confirmed Webhook
 
+`X-Webhook-Event: withdrawal.confirmed`
+
 ```json
 {
-  "event": "withdrawal.confirmed",
-  "data": {
-    "id": "wth_xxxxxxxxxxxxxxxx",
-    "token": "USDT",
-    "amount": "100.00",
-    "address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
-    "status": "confirmed",
-    "fee": "6.00",
-    "netAmount": "94.00",
-    "commission": "6.00",
-    "commissionRate": "0.05",
-    "txHash": "0x1234567890abcdef...",
-    "confirmedAt": "2024-12-19T11:45:00Z",
-    "metadata": {
-      "orderId": "order_123",
-      "customerEmail": "customer@example.com",
-      "feeCalculation": {
-        "baseFee": "1.00",
-        "markupRate": "0.05",
-        "totalFee": "6.00",
-        "netAmount": "94.00"
-      }
-    }
+  "type": "withdrawal",
+  "withdrawalId": "cmdl8u2xq0001abcd1234efgh",
+  "amount": "100.5",
+  "currency": "USDT",
+  "status": "confirmed",
+  "txHash": "3f7a9c...",
+  "referenceId": "order_123",
+  "address": "TXYZa1b2c3d4e5f6g7h8i9j0k1l2m3n4o5",
+  "identifier": "order_123",
+  "feeCharges": {
+    "amount": "1",
+    "percentage": "0",
+    "type": "FIXED_AMOUNT"
   },
-  "timestamp": "2024-12-19T11:45:00Z"
+  "receivableAmount": "99.5",
+  "eventId": "cmdl8u2xq0002abcd1234efgh"
 }
 ```
 
 ### Withdrawal Failed Webhook
 
+`X-Webhook-Event: withdrawal.failed`
+
 ```json
 {
-  "event": "withdrawal.failed",
-  "data": {
-    "id": "wth_xxxxxxxxxxxxxxxx",
-    "token": "BTC",
-    "amount": 0.001,
-    "address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
-    "status": "failed",
-    "failedAt": "2024-12-19T11:45:00Z",
-    "reason": "insufficient_funds",
-    "metadata": {
-      "orderId": "order_123",
-      "customerEmail": "customer@example.com"
-    }
-  },
-  "timestamp": "2024-12-19T11:45:00Z"
+  "type": "withdrawal",
+  "withdrawalId": "cmdl8u2xq0001abcd1234efgh",
+  "amount": "100.5",
+  "currency": "USDT",
+  "status": "failed",
+  "reason": "Withdrawal failed",
+  "txHash": "3f7a9c...",
+  "referenceId": "order_123",
+  "address": "TXYZa1b2c3d4e5f6g7h8i9j0k1l2m3n4o5",
+  "identifier": "order_123",
+  "eventId": "cmdl8u2xq0003abcd1234efgh"
 }
 ```
+
+On failure the reserved amount (including fees) is returned to your balance and your `referenceId` is released, so you can safely retry with the same `referenceId`.
 
 ## Error Handling
 
 ### Common Errors
 
-| Status Code | Error                     | Description                           |
-| ----------- | ------------------------- | ------------------------------------- |
-| 400         | `INVALID_ADDRESS`         | Invalid destination address           |
-| 400         | `INSUFFICIENT_BALANCE`    | Not enough funds for withdrawal       |
-| 400         | `INVALID_AMOUNT`          | Amount is too small or invalid        |
-| 400         | `ADDRESS_NOT_WHITELISTED` | Address not in whitelist (if enabled) |
-| 429         | `RATE_LIMITED`            | Too many withdrawal requests          |
+| Status Code | Error | Description |
+|-------------|-------|-------------|
+| 400 | `Invalid request data` | Validation failed — `details` lists the offending fields |
+| 400 | `Withdrawal amount must be greater than zero` | Amount is zero or negative |
+| 400 | `Withdrawals of {currency} on {network} are not supported` | The `(currency, network)` pair is unknown or disabled for withdrawals |
+| 400 | `Amount below minimum withdrawal` | Amount below the pair's minimum — response includes `minWithdrawal`, `currency`, `network` |
+| 400 | `No {currency} balance on {network} for this account` | You hold no balance on that chain |
+| 400 | `Insufficient balance` | Available balance on that chain doesn't cover `amount + fees` |
+| 401 | `Authentication required` | Missing or invalid API key |
+| 403 | `Insufficient permissions to initiate a withdrawal` | API key lacks write/payout capability |
+| 403 | `Merchant account is not active` | Your merchant account is suspended or inactive |
+| 409 | `Duplicate referenceId` | A withdrawal with this `referenceId` already exists for your merchant account |
+| 500 | `Payout initiation failed` | Payout could not be processed — the reserved amount has been returned to your balance |
+| 503 | `Withdrawal temporarily unavailable` | Withdrawals are temporarily unavailable — retry shortly or contact support |
 
-### Example Error Response
+### Example Error Responses
+
+Insufficient balance (per-chain):
 
 ```json
 {
-  "error": "INSUFFICIENT_BALANCE",
-  "message": "Available balance: 0.0005 BTC, Requested: 0.001 BTC",
-  "statusCode": 400
+  "error": "Insufficient balance",
+  "message": "Insufficient USDT balance on TRX. Deposits and withdrawals are per-chain: funds on other networks cannot be used.",
+  "available": "50.25",
+  "requested": "100.50",
+  "currency": "USDT",
+  "network": "TRX",
+  "feeInfo": {
+    "grossAmount": "100.5",
+    "netAmount": "98.5",
+    "totalFees": "2",
+    "feeBreakdown": {
+      "baseFee": "1",
+      "markupRate": "0",
+      "markupAmount": "1",
+      "networkFee": "1",
+      "totalFee": "2"
+    }
+  }
 }
 ```
+
+Duplicate `referenceId`:
+
+```json
+{
+  "error": "Duplicate referenceId",
+  "message": "A withdrawal with this referenceId already exists for your merchant account. Use a new referenceId to submit a new withdrawal."
+}
+```
+
+See [Error Handling](https://docs.dcepay.io/docs/error-handling) for the full guide.
 
 ## Best Practices
 
@@ -432,20 +477,20 @@ You'll receive webhook notifications when withdrawal status changes:
 Always validate addresses before creating withdrawals:
 
 ```javascript
-function validateAddress(token, address) {
+function validateAddress(network, address) {
   const patterns = {
-    'BTC': /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$|^bc1[a-z0-9]{39,59}$/,
+    'TRX': /^T[a-zA-Z0-9]{33}$/,
     'ETH': /^0x[a-fA-F0-9]{40}$/,
-    'USDT': /^0x[a-fA-F0-9]{40}$/
+    'BNB': /^0x[a-fA-F0-9]{40}$/
   };
 
-  const pattern = patterns[token];
+  const pattern = patterns[network];
   if (!pattern) {
-    throw new Error(`Unsupported token: ${token}`);
+    throw new Error(`Unsupported network: ${network}`);
   }
 
   if (!pattern.test(address)) {
-    throw new Error(`Invalid ${token} address: ${address}`);
+    throw new Error(`Invalid ${network} address: ${address}`);
   }
 
   return true;
@@ -454,109 +499,103 @@ function validateAddress(token, address) {
 
 ### 2. Balance Checking
 
-Always check balance before withdrawal:
+Always check the per-chain balance (including fees) before withdrawal:
 
 ```javascript
-async function safeWithdrawal(token, amount, address, metadata = {}) {
+async function safeWithdrawal(currency, network, amount, destination, referenceId) {
   // 1. Validate address
-  validateAddress(token, address);
+  validateAddress(network, destination);
 
-  // 2. Check balance
-  await validateWithdrawalBalance(token, amount);
+  // 2. Check balance on the target chain
+  await validateWithdrawalBalance(currency, network, amount);
 
   // 3. Create withdrawal
-  const withdrawal = await createWithdrawal(token, amount, address, metadata);
+  const withdrawal = await createWithdrawal(currency, network, amount, destination, referenceId);
 
   // 4. Log withdrawal
-  console.log(`Withdrawal created: ${withdrawal.id}`);
-  console.log(`Amount: ${withdrawal.amount} ${token}`);
-  console.log(`Fee: ${withdrawal.fee} ${token}`);
-  console.log(`Net amount: ${withdrawal.netAmount} ${token}`);
+  console.log(`Withdrawal created: ${withdrawal.withdrawalId}`);
+  console.log(`Amount: ${withdrawal.amount} ${currency} on ${network}`);
+  console.log(`Fees (on top): ${withdrawal.feeInfo.totalFees} ${currency}`);
 
   return withdrawal;
 }
 ```
 
-### 3. Idempotency
+### 3. Idempotency with referenceId
 
-Use idempotency keys to prevent duplicate withdrawals:
+Pass your own `referenceId` in the request body to prevent duplicate payouts. The `referenceId` is unique per merchant:
+
+- Submitting the same `referenceId` twice returns `409 Duplicate referenceId` — a second payout is **never** created.
+- If a withdrawal **fails**, its `referenceId` is automatically released so you can retry with the same reference.
 
 ```javascript
-async function createWithdrawalWithIdempotency(token, amount, address, metadata = {}) {
-  const idempotencyKey = generateIdempotencyKey(token, amount, address, metadata);
-
+async function createWithdrawalIdempotent(currency, network, amount, destination, orderId) {
   const response = await fetch('https://api.dcepay.io/api/withdrawals', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${process.env.DCE_API_KEY}`,
-      'Content-Type': 'application/json',
-      'Idempotency-Key': idempotencyKey
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      token,
+      currency,
+      network,
       amount,
-      address,
-      metadata
+      destination,
+      referenceId: orderId  // your idempotency key, unique per merchant
     })
   });
 
-  return response.json();
-}
+  if (response.status === 409) {
+    // Already submitted — do NOT retry with a new referenceId unless you
+    // intend to create a second payout.
+    console.log(`Withdrawal for ${orderId} already exists`);
+    return null;
+  }
 
-function generateIdempotencyKey(token, amount, address, metadata) {
-  const data = JSON.stringify({ token, amount, address, metadata });
-  return require('crypto').createHash('sha256').update(data).digest('hex');
+  return response.json();
 }
 ```
 
 ### 4. Webhook Handling
 
-Handle withdrawal webhooks properly:
+Handle withdrawal webhooks properly. Delivery is at-least-once, so make handlers idempotent (deduplicate on `eventId`), and acknowledge with `{ "ok": true }`:
 
 ```javascript
 app.post('/webhooks', async (req, res) => {
-  const { event, data } = req.body;
+  const event = req.headers['x-webhook-event'];
+  const payload = req.body;
+
+  // Deduplicate — the same eventId may be delivered more than once
+  if (await alreadyProcessed(payload.eventId)) {
+    return res.status(200).json({ ok: true });
+  }
 
   switch (event) {
     case 'withdrawal.confirmed':
-      await handleWithdrawalConfirmed(data);
+      await handleWithdrawalConfirmed(payload);
       break;
     case 'withdrawal.failed':
-      await handleWithdrawalFailed(data);
+      await handleWithdrawalFailed(payload);
       break;
     default:
       console.log(`Unhandled webhook event: ${event}`);
   }
 
-  res.status(200).json({ received: true });
+  res.status(200).json({ ok: true });
 });
 
-async function handleWithdrawalConfirmed(data) {
-  const { id, amount, address, txHash, metadata } = data;
-  
-  // Update your database
-  await updateWithdrawalStatus(id, 'confirmed', txHash);
-  
-  // Notify customer
-  await notifyCustomer(metadata.customerEmail, {
-    type: 'withdrawal_confirmed',
-    amount,
-    address,
-    txHash
-  });
+async function handleWithdrawalConfirmed(payload) {
+  const { withdrawalId, referenceId, amount, address, txHash } = payload;
+
+  // referenceId is YOUR reference from the original request
+  await updateWithdrawalStatus(referenceId, 'confirmed', txHash);
 }
 
-async function handleWithdrawalFailed(data) {
-  const { id, reason, metadata } = data;
-  
-  // Update your database
-  await updateWithdrawalStatus(id, 'failed', null, reason);
-  
-  // Notify customer
-  await notifyCustomer(metadata.customerEmail, {
-    type: 'withdrawal_failed',
-    reason
-  });
+async function handleWithdrawalFailed(payload) {
+  const { referenceId, reason } = payload;
+
+  await updateWithdrawalStatus(referenceId, 'failed', null, reason);
+  // Safe to retry the payout with the same referenceId
 }
 ```
 
@@ -571,36 +610,37 @@ class WithdrawalService {
     this.baseUrl = 'https://api.dcepay.io/api';
   }
 
-  async createWithdrawal(token, amount, address, metadata = {}) {
-    // Validate inputs
-    this.validateAddress(token, address);
-    await this.validateBalance(token, amount);
-
+  async createWithdrawal(currency, network, amount, destination, referenceId, description) {
     const response = await fetch(`${this.baseUrl}/withdrawals`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-        'Idempotency-Key': this.generateIdempotencyKey(token, amount, address, metadata)
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        token,
-        amount,
-        address,
-        metadata
+        currency,
+        network,
+        amount,       // decimal string
+        destination,
+        referenceId,  // idempotency key, unique per merchant
+        description
       })
     });
 
+    const body = await response.json();
+
+    if (response.status === 409) {
+      throw new Error(`Duplicate referenceId: ${referenceId}`);
+    }
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Withdrawal creation failed: ${error.message}`);
+      throw new Error(`Withdrawal creation failed: ${body.message || body.error}`);
     }
 
-    return response.json();
+    return body;
   }
 
   async getWithdrawals(filters = {}) {
-    const params = new URLSearchParams(filters);
+    const params = new URLSearchParams(filters); // status, page, limit
     const response = await fetch(`${this.baseUrl}/withdrawals?${params}`, {
       headers: {
         'Authorization': `Bearer ${this.apiKey}`
@@ -610,8 +650,8 @@ class WithdrawalService {
     return response.json();
   }
 
-  async getWithdrawalById(id) {
-    const response = await fetch(`${this.baseUrl}/withdrawals/${id}`, {
+  async getBalances() {
+    const response = await fetch(`${this.baseUrl}/balance`, {
       headers: {
         'Authorization': `Bearer ${this.apiKey}`
       }
@@ -619,54 +659,20 @@ class WithdrawalService {
 
     return response.json();
   }
-
-  async validateBalance(token, amount) {
-    const response = await fetch(`${this.baseUrl}/balance`, {
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`
-      }
-    });
-
-    const { balances } = await response.json();
-    const balance = balances.find(b => b.token === token);
-
-    if (!balance || balance.available < amount) {
-      throw new Error(`Insufficient balance for ${amount} ${token}`);
-    }
-
-    return true;
-  }
-
-  validateAddress(token, address) {
-    const patterns = {
-      'BTC': /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$|^bc1[a-z0-9]{39,59}$/,
-      'ETH': /^0x[a-fA-F0-9]{40}$/,
-      'USDT': /^0x[a-fA-F0-9]{40}$/
-    };
-
-    const pattern = patterns[token];
-    if (!pattern || !pattern.test(address)) {
-      throw new Error(`Invalid ${token} address: ${address}`);
-    }
-  }
-
-  generateIdempotencyKey(token, amount, address, metadata) {
-    const data = JSON.stringify({ token, amount, address, metadata });
-    return require('crypto').createHash('sha256').update(data).digest('hex');
-  }
 }
 
 // Usage
 const withdrawalService = new WithdrawalService(process.env.DCE_API_KEY);
 
 try {
-  const withdrawal = await withdrawalService.createWithdrawal('BTC', 0.001, 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh', {
-    orderId: 'order_123',
-    customerEmail: 'customer@example.com'
-  });
+  const withdrawal = await withdrawalService.createWithdrawal(
+    'USDT', 'TRX', '100.50',
+    'TXYZa1b2c3d4e5f6g7h8i9j0k1l2m3n4o5',
+    'order_123'
+  );
 
-  console.log('Withdrawal created:', withdrawal.id);
-  console.log('Net amount:', withdrawal.netAmount);
+  console.log('Withdrawal created:', withdrawal.withdrawalId);
+  console.log('Fees charged on top:', withdrawal.feeInfo.totalFees);
 } catch (error) {
   console.error('Withdrawal failed:', error.message);
 }
@@ -676,8 +682,6 @@ try {
 
 Now that you understand withdrawals, explore:
 
-1. [Balance Management](balance-management.md) - Monitor your account balance
-2. [Settlements](settlements.md) - Request bulk settlements
-3. [Webhooks](webhooks.md) - Handle withdrawal notifications
-
-<br />
+1. [Balance Management](https://docs.dcepay.io/docs/balance-management) - Monitor your per-chain account balances
+2. [Transactions](https://docs.dcepay.io/docs/transactions) - Track withdrawal lifecycle and statuses
+3. [Webhooks](https://docs.dcepay.io/docs/webhooks) - Handle withdrawal notifications

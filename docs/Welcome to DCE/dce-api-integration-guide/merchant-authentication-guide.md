@@ -5,8 +5,6 @@ hidden: false
 metadata:
   robots: index
 ---
-<br />
-
 This guide explains how merchants should authenticate from their backend systems after account creation.
 
 ## 1) Account Creation and Credential Handoff
@@ -63,5 +61,3 @@ curl -X GET "${DCE_BASE_URL}/api/balance?currency=USD" \
 - `401`: missing/invalid API key
 - `403`: authenticated but not permitted for endpoint scope
 - `429`: rate limit exceeded; back off and retry based on headers
-
-<br />

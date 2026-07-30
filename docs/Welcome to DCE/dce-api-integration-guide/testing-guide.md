@@ -5,8 +5,6 @@ hidden: false
 metadata:
   robots: index
 ---
-<br />
-
 Comprehensive testing guide for the dce API integration. This guide covers testing strategies, tools, and best practices to ensure your integration works correctly in both development and production environments.
 
 ## Overview
@@ -29,7 +27,7 @@ Use test API keys for all development and testing:
 ```bash
 # Test environment configuration
 DCE_API_KEY=v8_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-DCE_BASE_URL=https://staging.dcepay.io
+DCE_BASE_URL=https://api.dcepay.dev
 DCE_WEBHOOK_SECRET=test_webhook_secret_here
 ```
 
@@ -47,13 +45,12 @@ The test environment provides:
 ### Testing Authentication
 
 **JavaScript (Jest):**
-
 ```javascript
 const axios = require('axios');
 
 describe('Authentication Tests', () => {
   test('should authenticate with valid API key', async () => {
-    const response = await axios.get('https://staging.dcepay.io/api/balance?currency=USD', {
+    const response = await axios.get('https://api.dcepay.dev/api/balance?currency=USD', {
       headers: {
         'Authorization': `Bearer ${process.env.DCE_API_KEY}`,
         'Content-Type': 'application/json'
@@ -66,7 +63,7 @@ describe('Authentication Tests', () => {
 
   test('should reject invalid API key', async () => {
     try {
-      await axios.get('https://staging.dcepay.io/api/balance', {
+      await axios.get('https://api.dcepay.dev/api/balance', {
         headers: {
           'Authorization': 'Bearer invalid_key',
           'Content-Type': 'application/json'
@@ -82,7 +79,6 @@ describe('Authentication Tests', () => {
 ```
 
 **Python (pytest):**
-
 ```python
 import pytest
 import requests
@@ -91,7 +87,7 @@ import os
 class TestAuthentication:
     def test_valid_api_key(self):
         response = requests.get(
-            'https://staging.dcepay.io/api/balance?currency=USD',
+            'https://api.dcepay.dev/api/balance?currency=USD',
             headers={
                 'Authorization': f'Bearer {os.getenv("DCE_API_KEY")}',
                 'Content-Type': 'application/json'
@@ -104,7 +100,7 @@ class TestAuthentication:
     def test_invalid_api_key(self):
         with pytest.raises(requests.exceptions.HTTPError) as exc_info:
             requests.get(
-                'https://staging.dcepay.io/api/balance',
+                'https://api.dcepay.dev/api/balance',
                 headers={
                     'Authorization': 'Bearer invalid_key',
                     'Content-Type': 'application/json'
@@ -118,7 +114,6 @@ class TestAuthentication:
 ### Testing Deposit Creation
 
 **JavaScript:**
-
 ```javascript
 describe('Deposit Tests', () => {
   test('should create deposit address', async () => {
@@ -132,7 +127,7 @@ describe('Deposit Tests', () => {
     };
 
     const response = await axios.post(
-      'https://staging.dcepay.io/api/deposit-address',
+      'https://api.dcepay.dev/api/deposit-address',
       depositData,
       {
         headers: {
@@ -157,7 +152,7 @@ describe('Deposit Tests', () => {
 
     try {
       await axios.post(
-        'https://staging.dcepay.io/api/deposit-address',
+        'https://api.dcepay.dev/api/deposit-address',
         invalidData,
         {
           headers: {
@@ -176,7 +171,6 @@ describe('Deposit Tests', () => {
 ```
 
 **Python:**
-
 ```python
 class TestDeposits:
     def test_create_deposit_address(self):
@@ -190,7 +184,7 @@ class TestDeposits:
         }
 
         response = requests.post(
-            'https://staging.dcepay.io/api/deposit-address',
+            'https://api.dcepay.dev/api/deposit-address',
             json=deposit_data,
             headers={
                 'Authorization': f'Bearer {os.getenv("DCE_API_KEY")}',
@@ -212,7 +206,7 @@ class TestDeposits:
         }
 
         response = requests.post(
-            'https://staging.dcepay.io/api/deposit-address',
+            'https://api.dcepay.dev/api/deposit-address',
             json=invalid_data,
             headers={
                 'Authorization': f'Bearer {os.getenv("DCE_API_KEY")}',
@@ -229,7 +223,6 @@ class TestDeposits:
 ### Complete Payment Flow Test
 
 **JavaScript:**
-
 ```javascript
 describe('Complete Payment Flow', () => {
   let depositId;
@@ -238,7 +231,7 @@ describe('Complete Payment Flow', () => {
   test('should complete full payment flow', async () => {
     // Step 1: Create deposit address
     const depositResponse = await axios.post(
-      'https://staging.dcepay.io/api/deposit-address',
+      'https://api.dcepay.dev/api/deposit-address',
       {
         token: 'ETH',
         amount: 0.1,
@@ -260,7 +253,7 @@ describe('Complete Payment Flow', () => {
 
     // Step 2: Create payment URL
     const urlResponse = await axios.post(
-      'https://staging.dcepay.io/api/deposit-url',
+      'https://api.dcepay.dev/api/deposit-url',
       {
         depositId: depositId,
         customization: {
@@ -281,7 +274,7 @@ describe('Complete Payment Flow', () => {
 
     // Step 3: Check deposit status
     const statusResponse = await axios.get(
-      `https://staging.dcepay.io/api/deposits/${depositId}`,
+      `https://api.dcepay.dev/api/deposits/${depositId}`,
       {
         headers: {
           'Authorization': `Bearer ${process.env.DCE_API_KEY}`,
@@ -299,7 +292,7 @@ describe('Complete Payment Flow', () => {
 
     // Step 5: Verify final status
     const finalStatusResponse = await axios.get(
-      `https://staging.dcepay.io/api/deposits/${depositId}`,
+      `https://api.dcepay.dev/api/deposits/${depositId}`,
       {
         headers: {
           'Authorization': `Bearer ${process.env.DCE_API_KEY}`,
@@ -315,7 +308,6 @@ describe('Complete Payment Flow', () => {
 ```
 
 **Python:**
-
 ```python
 import time
 
@@ -332,7 +324,7 @@ class TestPaymentFlow:
         }
 
         deposit_response = requests.post(
-            'https://staging.dcepay.io/api/deposit-address',
+            'https://api.dcepay.dev/api/deposit-address',
             json=deposit_data,
             headers={
                 'Authorization': f'Bearer {os.getenv("DCE_API_KEY")}',
@@ -353,7 +345,7 @@ class TestPaymentFlow:
         }
 
         url_response = requests.post(
-            'https://staging.dcepay.io/api/deposit-url',
+            'https://api.dcepay.dev/api/deposit-url',
             json=url_data,
             headers={
                 'Authorization': f'Bearer {os.getenv("DCE_API_KEY")}',
@@ -366,7 +358,7 @@ class TestPaymentFlow:
 
         # Step 3: Check deposit status
         status_response = requests.get(
-            f'https://staging.dcepay.io/api/deposits/{deposit_id}',
+            f'https://api.dcepay.dev/api/deposits/{deposit_id}',
             headers={
                 'Authorization': f'Bearer {os.getenv("DCE_API_KEY")}',
                 'Content-Type': 'application/json'
@@ -381,7 +373,7 @@ class TestPaymentFlow:
 
         # Step 5: Verify final status
         final_status_response = requests.get(
-            f'https://staging.dcepay.io/api/deposits/{deposit_id}',
+            f'https://api.dcepay.dev/api/deposits/{deposit_id}',
             headers={
                 'Authorization': f'Bearer {os.getenv("DCE_API_KEY")}',
                 'Content-Type': 'application/json'
@@ -410,7 +402,6 @@ ngrok http 3000
 ```
 
 **Webhook endpoint test:**
-
 ```javascript
 // Express.js webhook endpoint
 app.post('/webhook/dce', express.json(), (req, res) => {
@@ -455,7 +446,6 @@ function verifyWebhookSignature(payload, signature, secret) {
 ```
 
 **Python webhook endpoint:**
-
 ```python
 from flask import Flask, request, jsonify
 import hmac
@@ -514,7 +504,6 @@ if __name__ == '__main__':
 ### Webhook Testing Tools
 
 **cURL webhook simulation:**
-
 ```bash
 # Simulate deposit confirmed webhook
 curl -X POST "https://your-domain.com/webhook/dce" \
@@ -533,7 +522,6 @@ curl -X POST "https://your-domain.com/webhook/dce" \
 ```
 
 **JavaScript webhook testing:**
-
 ```javascript
 const crypto = require('crypto');
 
@@ -577,11 +565,10 @@ simulateWebhook('deposit.confirmed', depositData, process.env.DCE_WEBHOOK_SECRET
 ### API Endpoint Load Testing
 
 **Using Artillery (JavaScript):**
-
 ```javascript
 // artillery-config.yml
 config:
-  target: 'https://staging.dcepay.io'
+  target: 'https://api.dcepay.dev'
   phases:
     - duration: 60
       arrivalRate: 10
@@ -611,7 +598,6 @@ scenarios:
 ```
 
 **Using Locust (Python):**
-
 ```python
 from locust import HttpUser, task, between
 import json
@@ -652,7 +638,6 @@ class V8APIUser(HttpUser):
 ### Webhook Load Testing
 
 **JavaScript webhook load test:**
-
 ```javascript
 const crypto = require('crypto');
 
@@ -712,12 +697,11 @@ loadTestWebhooks(100);
 ### Authentication Testing
 
 **Test invalid API keys:**
-
 ```javascript
 describe('Security Tests', () => {
   test('should reject expired API key', async () => {
     try {
-      await axios.get('https://staging.dcepay.io/api/balance', {
+      await axios.get('https://api.dcepay.dev/api/balance', {
         headers: {
           'Authorization': 'Bearer expired_key_123',
           'Content-Type': 'application/json'
@@ -731,7 +715,7 @@ describe('Security Tests', () => {
 
   test('should reject missing API key', async () => {
     try {
-      await axios.get('https://staging.dcepay.io/api/balance', {
+      await axios.get('https://api.dcepay.dev/api/balance', {
         headers: {
           'Content-Type': 'application/json'
         }
@@ -747,7 +731,6 @@ describe('Security Tests', () => {
 ### Webhook Security Testing
 
 **Test webhook signature validation:**
-
 ```javascript
 describe('Webhook Security', () => {
   test('should reject webhook with invalid signature', async () => {
@@ -794,7 +777,6 @@ describe('Webhook Security', () => {
 ### Rate Limiting Tests
 
 **JavaScript:**
-
 ```javascript
 describe('Rate Limiting', () => {
   test('should handle rate limit exceeded', async () => {
@@ -803,7 +785,7 @@ describe('Rate Limiting', () => {
     // Make many requests quickly to trigger rate limiting
     for (let i = 0; i < 150; i++) {
       requests.push(
-        axios.get('https://staging.dcepay.io/api/balance', {
+        axios.get('https://api.dcepay.dev/api/balance', {
           headers: {
             'Authorization': `Bearer ${process.env.DCE_API_KEY}`,
             'Content-Type': 'application/json'
@@ -826,12 +808,11 @@ describe('Rate Limiting', () => {
 ### Network Error Testing
 
 **JavaScript:**
-
 ```javascript
 describe('Network Error Handling', () => {
   test('should handle network timeouts', async () => {
     try {
-      await axios.get('https://staging.dcepay.io/api/balance', {
+      await axios.get('https://api.dcepay.dev/api/balance', {
         headers: {
           'Authorization': `Bearer ${process.env.DCE_API_KEY}`,
           'Content-Type': 'application/json'
@@ -846,7 +827,7 @@ describe('Network Error Handling', () => {
 
   test('should handle server errors gracefully', async () => {
     try {
-      await axios.get('https://staging.dcepay.io/api/nonexistent-endpoint', {
+      await axios.get('https://api.dcepay.dev/api/nonexistent-endpoint', {
         headers: {
           'Authorization': `Bearer ${process.env.DCE_API_KEY}`,
           'Content-Type': 'application/json'
@@ -865,7 +846,6 @@ describe('Network Error Handling', () => {
 ### CI/CD Integration
 
 **GitHub Actions workflow:**
-
 ```yaml
 name: API Tests
 
@@ -911,7 +891,6 @@ jobs:
 ```
 
 **package.json test scripts:**
-
 ```json
 {
   "scripts": {
@@ -967,7 +946,7 @@ The staging environment provides a production-like environment for comprehensive
 ```bash
 # Staging environment configuration
 DCE_API_KEY=v8_staging_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-DCE_BASE_URL=https://staging.dcepay.io
+DCE_BASE_URL=https://api.dcepay.dev
 DCE_WEBHOOK_SECRET=staging_webhook_secret_here
 NODE_ENV=staging
 ```
@@ -975,13 +954,12 @@ NODE_ENV=staging
 #### Staging Test Strategy
 
 **1. End-to-End Testing**
-
 ```javascript
 describe('Staging Environment Tests', () => {
   test('should complete full payment flow in staging', async () => {
     // Create deposit with real blockchain interaction
     const depositResponse = await axios.post(
-      'https://staging.dcepay.io/api/deposit-address',
+      'https://api.dcepay.dev/api/deposit-address',
       {
         token: 'ETH',
         amount: 0.01, // Small amount for testing
@@ -1003,7 +981,7 @@ describe('Staging Environment Tests', () => {
 
     // Verify deposit creation
     const statusResponse = await axios.get(
-      `https://staging.dcepay.io/api/deposits/${depositId}`,
+      `https://api.dcepay.dev/api/deposits/${depositId}`,
       {
         headers: {
           'Authorization': `Bearer ${process.env.DCE_STAGING_API_KEY}`,
@@ -1046,11 +1024,10 @@ describe('Staging Environment Tests', () => {
 ```
 
 **2. Performance Testing in Staging**
-
 ```javascript
 // Staging performance test configuration
 const stagingLoadTest = {
-  target: 'https://staging.dcepay.io',
+  target: 'https://api.dcepay.dev',
   phases: [
     { duration: 300, arrivalRate: 5 }, // 5 minutes at 5 req/sec
     { duration: 300, arrivalRate: 10 }, // 5 minutes at 10 req/sec
@@ -1077,7 +1054,6 @@ artillery.run(stagingLoadTest, (err, results) => {
 ```
 
 **3. Database Integration Testing**
-
 ```javascript
 describe('Staging Database Integration', () => {
   test('should persist webhook data correctly', async () => {
@@ -1124,7 +1100,6 @@ Production testing focuses on monitoring, alerting, and ensuring system reliabil
 #### Production Monitoring Setup
 
 **1. Health Check Monitoring**
-
 ```javascript
 class ProductionHealthMonitor {
   constructor() {
@@ -1201,7 +1176,6 @@ healthMonitor.startMonitoring();
 ```
 
 **2. Error Rate Monitoring**
-
 ```javascript
 class ErrorRateMonitor {
   constructor() {
@@ -1254,7 +1228,6 @@ setInterval(() => errorMonitor.checkErrorRates(), errorMonitor.checkInterval);
 ```
 
 **3. Webhook Delivery Monitoring**
-
 ```javascript
 class WebhookDeliveryMonitor {
   constructor() {
@@ -1322,7 +1295,6 @@ setInterval(() => webhookMonitor.checkWebhookDelivery(), 60000); // Check every 
 #### Production Alerting System
 
 **1. Alert Configuration**
-
 ```javascript
 class ProductionAlerting {
   constructor() {
@@ -1453,7 +1425,6 @@ const alerting = new ProductionAlerting();
 ```
 
 **2. Automated Response Actions**
-
 ```javascript
 class AutomatedResponse {
   constructor() {
@@ -1554,25 +1525,30 @@ const automatedResponse = new AutomatedResponse();
   - [ ] Webhook endpoints deployed and tested
   - [ ] Database connections verified
   - [ ] SSL certificates installed
+
 - [ ] **Monitoring Setup**
   - [ ] Health checks configured
   - [ ] Error rate monitoring active
   - [ ] Response time monitoring active
   - [ ] Webhook delivery monitoring active
+
 - [ ] **Alerting Configuration**
   - [ ] Slack notifications configured
   - [ ] Email alerts configured
   - [ ] PagerDuty integration active
   - [ ] Alert thresholds set appropriately
+
 - [ ] **Load Testing**
   - [ ] Production-like load testing completed
   - [ ] Performance benchmarks established
   - [ ] Scalability verified
+
 - [ ] **Security Testing**
   - [ ] Authentication tests passed
   - [ ] Authorization tests passed
   - [ ] Webhook signature validation verified
   - [ ] Input validation tested
+
 - [ ] **Backup and Recovery**
   - [ ] Database backups configured
   - [ ] Recovery procedures documented
@@ -1585,11 +1561,13 @@ const automatedResponse = new AutomatedResponse();
   - [ ] Check webhook delivery success rates
   - [ ] Monitor system resource usage
   - [ ] Review alert history
+
 - [ ] **Weekly Checks**
   - [ ] Analyze performance trends
   - [ ] Review security logs
   - [ ] Update monitoring thresholds
   - [ ] Test alerting systems
+
 - [ ] **Monthly Checks**
   - [ ] Review and update test coverage
   - [ ] Analyze user feedback and issues
@@ -1600,14 +1578,14 @@ const automatedResponse = new AutomatedResponse();
 
 ### Recommended Testing Tools
 
-| Tool      | Purpose                       | Language   |
-| --------- | ----------------------------- | ---------- |
-| Jest      | Unit and integration testing  | JavaScript |
-| pytest    | Unit and integration testing  | Python     |
-| Artillery | Load testing                  | JavaScript |
-| Locust    | Load testing                  | Python     |
-| ngrok     | Local webhook testing         | All        |
-| Postman   | API testing and documentation | All        |
+| Tool | Purpose | Language |
+|------|---------|----------|
+| Jest | Unit and integration testing | JavaScript |
+| pytest | Unit and integration testing | Python |
+| Artillery | Load testing | JavaScript |
+| Locust | Load testing | Python |
+| ngrok | Local webhook testing | All |
+| Postman | API testing and documentation | All |
 
 ### Test Environment Setup
 
@@ -1636,10 +1614,10 @@ After completing your testing:
 
 For more information, see:
 
-- [Error Handling](error-handling.md) - Handle API errors effectively
-- [Webhooks](webhooks.md) - Set up webhook processing
-- [API Reference](api-reference.md) - Complete endpoint documentation
+- [Error Handling](https://docs.dcepay.io/docs/error-handling) - Handle API errors effectively
+- [Webhooks](https://docs.dcepay.io/docs/webhooks) - Set up webhook processing
+- [API Reference](https://docs.dcepay.io/docs/api-reference) - Complete endpoint documentation
 
-***
+---
 
-_For testing support, contact [api-support@dce.com](mailto:api-support@dce.com) or visit our [developer portal](https://developers.dce.com)._
+*For testing support, contact api-support@dce.com or visit our [developer portal](https://developers.dce.com).* 
