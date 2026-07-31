@@ -154,7 +154,8 @@ The event name travels in the `X-Webhook-Event` header; the body carries a `type
   "feeCharges": {
     "amount": "1.00",
     "percentage": "0",
-    "type": "FIXED_AMOUNT"
+    "type": "FIXED_AMOUNT",
+    "networkFee": "1.00"
   },
   "receivableAmount": "199.00",
   "eventId": "b3a1c2d4-0000-0000-0000-000000000002"
@@ -162,7 +163,7 @@ The event name travels in the `X-Webhook-Event` header; the body carries a `type
 ```
 
 - `referenceId` (and `identifier`) is **your** merchant `referenceId` as submitted with the withdrawal — not an internal id — so you can correlate the callback with the request you made.
-- `feeCharges` is present only when a withdrawal commission was charged; `receivableAmount` = `amount` − commission.
+- `feeCharges` is **always present**. `amount` is the commission (`"0"` with `type: "NONE"` when no commission is charged); `networkFee` is the per-chain fee charged on top of the withdrawal amount. `receivableAmount` = `amount` − commission.
 
 ### `withdrawal.failed`
 

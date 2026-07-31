@@ -384,12 +384,15 @@ The `referenceId` (and `identifier`) in callback payloads is **your own merchant
   "feeCharges": {
     "amount": "1",
     "percentage": "0",
-    "type": "FIXED_AMOUNT"
+    "type": "FIXED_AMOUNT",
+    "networkFee": "1"
   },
   "receivableAmount": "99.5",
   "eventId": "cmdl8u2xq0002abcd1234efgh"
 }
 ```
+
+`feeCharges` is always present — `amount` is `"0"` with `type: "NONE"` when no commission is charged; `networkFee` is the per-chain fee charged on top of the withdrawal amount.
 
 ### Withdrawal Failed Webhook
 
