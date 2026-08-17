@@ -2,6 +2,7 @@
 - get_api_deposit_address
 - post_api_deposit_address
 - get_api_deposit_page
+- get_api_deposit_page_status
 - post_api_deposit_url
 - get_api_deposit_url
 - get_api_exchange_rates

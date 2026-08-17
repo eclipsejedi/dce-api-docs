@@ -6,8 +6,9 @@ excerpt: >-
 
 
   **Query:** `page`, `limit` (defaults apply); optional `type`, `status`,
-  `currency` to filter. Response includes fee breakdowns and `referenceId`
-  resolution from deposits, withdrawals, and webhook metadata where present.
+  `currency`, `network` to filter. Response rows carry `currency` and `network`,
+  fee breakdowns, and `referenceId` resolution from deposits, withdrawals, and
+  webhook metadata where present.
 
 
   **Authentication:** `Authorization: <API key>` — send the raw key (no `Bearer`
