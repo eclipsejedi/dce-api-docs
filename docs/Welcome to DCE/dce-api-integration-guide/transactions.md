@@ -5,6 +5,8 @@ hidden: false
 metadata:
   robots: index
 ---
+_Last updated: 2026-07-30_
+
 The transactions API allows you to retrieve transaction history across all payment types. This guide covers transaction listing, filtering, pagination, and status tracking for deposits and withdrawals.
 
 ## Overview

@@ -5,6 +5,8 @@ hidden: false
 metadata:
   robots: index
 ---
+_Last updated: 2026-07-30_
+
 The DCE API uses API-key authentication.
 
 For backend onboarding details after account creation, see the [Merchant Authentication Guide](https://docs.dcepay.io/docs/merchant-authentication-guide).

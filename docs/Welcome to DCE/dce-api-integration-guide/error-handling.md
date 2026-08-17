@@ -5,6 +5,8 @@ hidden: false
 metadata:
   robots: index
 ---
+_Last updated: 2026-07-30_
+
 DCE API errors use standard HTTP status codes and JSON bodies. This guide explains what to expect and how to handle failures safely.
 
 ## Response patterns

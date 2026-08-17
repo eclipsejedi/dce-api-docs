@@ -5,6 +5,8 @@ hidden: false
 metadata:
   robots: index
 ---
+_Last updated: 2026-07-31_
+
 This guide covers only merchant-facing webhooks sent by DCE for deposit and withdrawal notifications.
 
 ## Overview

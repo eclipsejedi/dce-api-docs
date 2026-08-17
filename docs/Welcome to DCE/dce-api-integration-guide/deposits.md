@@ -5,6 +5,8 @@ hidden: false
 metadata:
   robots: index
 ---
+_Last updated: 2026-07-30_
+
 The deposits API allows you to accept customer payments by creating deposit addresses and tracking payment status. This guide covers all aspects of deposit management including address creation, URL generation, payment tracking, and how deposits are credited and charged.
 
 ## Overview

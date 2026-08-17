@@ -5,6 +5,8 @@ hidden: false
 metadata:
   robots: index
 ---
+_Last updated: 2026-04-22_
+
 The exchange rates API provides real-time currency conversion rates and exchange rate management. This guide covers rate retrieval, currency conversion, rate updates, and integration patterns for handling multi-currency transactions.
 
 ## Overview

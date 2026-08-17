@@ -5,6 +5,8 @@ hidden: false
 metadata:
   robots: index
 ---
+_Last updated: 2026-07-30_
+
 This guide gets you from credentials to a working DCE API integration quickly.
 
 ## Prerequisites

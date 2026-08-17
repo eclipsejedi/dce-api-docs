@@ -5,6 +5,8 @@ hidden: false
 metadata:
   robots: index
 ---
+_Last updated: 2026-04-22_
+
 This guide describes baseline security controls for integrating with DCE API.
 
 ## 1) Protect API credentials

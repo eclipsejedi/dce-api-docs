@@ -5,6 +5,8 @@ hidden: false
 metadata:
   robots: index
 ---
+_Last updated: 2026-05-05_
+
 Comprehensive testing guide for the dce API integration. This guide covers testing strategies, tools, and best practices to ensure your integration works correctly in both development and production environments.
 
 ## Overview

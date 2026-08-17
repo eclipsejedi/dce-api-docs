@@ -5,6 +5,8 @@ hidden: false
 metadata:
   robots: index
 ---
+_Last updated: 2026-07-30_
+
 This page documents how fees are represented and calculated for merchant integrations.
 
 All fees are charged in-kind, in the currency and on the network of the underlying transaction (for example a USDT-TRX deposit is charged in USDT on TRX). Balances and fees are segmented per `(currency, network)` pair; today only **USDT on TRX** (and its Shasta testnet twin) is enabled for deposits and withdrawals — other pairs (USDT/USDC on ETH, BNB, SOL) are coming soon / available on request.

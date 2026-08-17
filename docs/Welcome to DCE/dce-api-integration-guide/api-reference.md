@@ -5,6 +5,8 @@ hidden: false
 metadata:
   robots: index
 ---
+_Last updated: 2026-07-30_
+
 This document provides a comprehensive reference for DCE API HTTP endpoints. Unless otherwise noted, routes require API key authentication.
 
 ## Base URL

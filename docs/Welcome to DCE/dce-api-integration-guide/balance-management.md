@@ -5,6 +5,8 @@ hidden: false
 metadata:
   robots: index
 ---
+_Last updated: 2026-07-30_
+
 The balance API exposes **per-(currency, network)** available and pending balances for the authenticated user. Balances are segmented by chain: a USDT balance on TRX is separate from a USDT balance on ETH, and funds deposited on one chain can only be withdrawn on that same chain — there is no cross-chain fungibility.
 
 > **Availability:** USDT on TRX (and its `TRX_SHASTA` testnet twin) is the pair enabled today. Other pairs (USDT/USDC on ETH, BNB, SOL) are coming soon / available on request.

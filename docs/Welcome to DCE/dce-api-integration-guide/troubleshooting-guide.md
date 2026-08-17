@@ -5,6 +5,8 @@ hidden: false
 metadata:
   robots: index
 ---
+_Last updated: 2026-07-30_
+
 Use this checklist to quickly diagnose common DCE API integration issues.
 
 ## 1) Authentication problems

@@ -1,8 +1,12 @@
 openapi: 3.0.3
 info:
   title: DCE API
-  version: 1.0.0
+  version: 1.0 (updated 2026-08-13)
   description: >-
+    **Last updated:** 2026-08-13 — see the
+    [Changelog](https://docs.dcepay.io/docs/changelog) for what changed.
+
+
     **DCE API** — Next.js service for merchant cryptocurrency operations:
     balances, deposits, deposit sessions, exchange rates, transaction history,
     withdrawals (with configurable fees), settlements, and internal webhook

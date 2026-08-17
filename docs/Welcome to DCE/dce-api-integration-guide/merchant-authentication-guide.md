@@ -5,6 +5,8 @@ hidden: false
 metadata:
   robots: index
 ---
+_Last updated: 2026-04-22_
+
 This guide explains how merchants should authenticate from their backend systems after account creation.
 
 ## 1) Account Creation and Credential Handoff

@@ -5,6 +5,8 @@ hidden: false
 metadata:
   robots: index
 ---
+_Last updated: 2026-07-30_
+
 DCE is a cryptocurrency payments and financial services platform. The **DCE API** lets you accept deposits, manage withdrawals, query balances and transaction history, use hosted deposit flows, and receive **webhooks** when money movement and ledger events occur—all over a straightforward JSON HTTP API.
 
 This page is the front door: what the product is, how to start integrating, where the technical detail lives, and how to reach the team.
@@ -88,6 +90,3 @@ We do not publish API keys or secrets over email. Use secure channels your accou
 
 If you are browsing this repository as a developer, the rest of the guides live in the [`docs/`](https://docs.dcepay.io/docs/dce-api-integration-guide) directory alongside this file.
 
----
-
-*Last updated: July 2026*

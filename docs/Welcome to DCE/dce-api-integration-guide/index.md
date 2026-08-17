@@ -5,6 +5,8 @@ hidden: false
 metadata:
   robots: index
 ---
+_Last updated: 2026-07-30_
+
 Welcome to the DCE API documentation for merchants and integrators. These guides help you integrate with the platform to accept stablecoin deposits (USDT on TRON today; more currencies and networks coming soon), manage per-network withdrawals, and automate operations with webhooks.
 
 ## 📋 Table of Contents
@@ -30,6 +32,7 @@ Welcome to the DCE API documentation for merchants and integrators. These guides
 - [Webhooks](https://docs.dcepay.io/docs/webhooks) - Handle real-time payment notifications
 - [API Reference](https://docs.dcepay.io/docs/api-reference) - Complete technical reference for all endpoints
 - [Fees Reference](https://docs.dcepay.io/docs/fees-reference) - Fee types, formulas, and reconciliation mappings
+- [Changelog](https://docs.dcepay.io/docs/changelog) - Dated record of API and platform changes
 
 ### 🛠️ Support & Troubleshooting
 - [Error Handling](https://docs.dcepay.io/docs/error-handling) - Understand common errors and troubleshooting
@@ -98,6 +101,3 @@ If you need help with your integration:
 - [Authentication setup](https://docs.dcepay.io/docs/authentication) — API key usage and safe patterns
 - [Security Guide](https://docs.dcepay.io/docs/security-guide) — operational security for integrations
 
----
-
-*Last updated: July 2026* 
