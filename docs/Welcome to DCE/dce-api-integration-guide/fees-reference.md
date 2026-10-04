@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-10-04_
+_Last updated: 2026-10-05_
 
 This page documents how fees are represented and calculated for merchant integrations.
 
@@ -126,7 +126,7 @@ Customer deposits below 1 USD equivalent (system setting `deposit_fee_exempt_bel
 
 ## Fee Splits and Merchant Margin
 
-Every fee event is recorded in a `FeeSplit` row that divides the charged fee four ways: `akashicShare`, `platformShare`, `resellerShare`, and `merchantShare` (the four shares always sum to the fee charged).
+Every fee event is recorded in a fee split that divides the charged fee four ways: the on-chain and provider costs the platform pays, the platform share, the reseller share and the merchant share (`merchantShare`). The four always sum to the fee charged.
 
 For merchants on a reseller line, the merchant-margin component (`merchantShare`) is **credited back to the merchant's balance** at fee time. The merchant's true fee cost is therefore `chargeAmount − merchantShare`. Margin earnings can be queried with `GET /api/merchants/{merchantId}/earnings` (see the Merchant Charges guide).
 
