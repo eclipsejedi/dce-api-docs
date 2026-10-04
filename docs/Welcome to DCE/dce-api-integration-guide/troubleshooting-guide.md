@@ -48,7 +48,7 @@ Checks:
 
 Checks:
 - Verify against raw request body bytes.
-- Use the merchant `webhookSecret` exactly.
+- Use the signing secret exactly as shown when you generated it (`whsec_…`). A rotated secret invalidates the previous one immediately. If you never generated one, the header is not sent at all.
 - Compare lowercase hex digest.
 
 DCE webhook headers:

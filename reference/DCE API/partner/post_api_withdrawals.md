@@ -7,15 +7,16 @@ excerpt: >-
 
   **Body (JSON):** `amount` — decimal **string**; `currency` (required) — `USDT`
   | `USDC`; `network` (required) — chain to pay out on (`TRX`, `ETH`, `BNB`,
-  `SOL`, or a testnet symbol); `destination` — payout address; optional
+  `POL`, `SOL`, or a testnet symbol); `destination` — payout address; optional
   `description`, `referenceId`.
 
 
   **Per-chain rules:** the `(currency, network)` pair must be enabled for
-  withdrawals (currently `USDT` on `TRX`) or the request fails with **400**
-  listing the enabled pairs. Balances are per-chain — funds on other networks
-  cannot cover the withdrawal. Total debited = `amount` + commission + per-chain
-  `networkFee` (quoted at submission from the asset fee matrix).
+  withdrawals (`USDT` on `TRX` today; `BNB` and `POL` pairs open after their
+  first production deposits) or the request fails with **400** listing the
+  enabled pairs. Balances are per-chain — funds on other networks cannot cover
+  the withdrawal. Total debited = `amount` + commission + per-chain `networkFee`
+  (quoted at submission from the asset fee matrix).
 
 
   **Idempotency:** `referenceId` is unique per merchant — resubmitting a used

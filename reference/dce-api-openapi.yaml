@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
   title: DCE API
-  version: 1.0 (updated 2026-08-13)
+  version: 1.0 (updated 2026-10-05)
   description: >-
-    **Last updated:** 2026-08-13 — see the
+    **Last updated:** 2026-10-05 — see the
     [Changelog](https://docs.dcepay.io/docs/changelog) for what changed.
 
 
@@ -20,7 +20,7 @@ info:
 
 
     **Networks** (request body `network` where applicable): `ETH`, `TRX`, `SEP`,
-    `TRX_SHASTA`, `BNB`, `tBNB` (see Prisma `NetworkSymbol`).
+    `TRX_SHASTA`, `BNB`, `tBNB`, `POL`, `POL_AMOY` (see Prisma `NetworkSymbol`).
 
 
     **Amounts:** request and response monetary fields are often decimal
@@ -86,10 +86,10 @@ servers:
 tags:
   - name: Partner
     description: "Merchant-facing integration: balances, deposit addresses and
-      hosted deposit links, exchange rates, transactions, withdrawals. Most
-      routes send the API key in `Authorization` (raw key; Bearer optional).
-      `GET /api/deposit-page` is a public session endpoint and uses a `token`
-      query parameter instead."
+      hosted deposit links, exchange rates, transactions, withdrawals, AML
+      address checks. Most routes send the API key in `Authorization` (raw key;
+      Bearer optional). `GET /api/deposit-page` is a public session endpoint and
+      uses a `token` query parameter instead."
   - name: Internal
     description: "Operator and system routes: users, wallets, deposits, settlements,
       reconciliation, webhooks, merchant configuration, and admin APIs."
@@ -98,10 +98,16 @@ tags:
       merchant user (`BalanceService`).
   - name: Deposits
     description: "Deposit addresses (`NetworkSymbol`: ETH, TRX, SEP, TRX_SHASTA,
-      BNB, tBNB), deposit URLs, and single-use deposit page tokens."
+      BNB, tBNB, POL, POL_AMOY), deposit URLs, and single-use deposit page
+      tokens."
   - name: Payouts
     description: Withdrawals with configurable fees (`WithdrawalFeeService`),
       balance reservation, and payout processing.
+  - name: Compliance
+    description: "Paid address checks: full AML screening (Elliptic risk score, risk
+      level, sanctions exposure; /api/aml-checks) and instant TRON deny-list
+      compliance verdicts (sanctions, Tether freezes, scam labels;
+      /api/compliance-checks)."
   - name: Rates
     description: Exchange rates for a requested base currency.
   - name: Transactions
@@ -134,6 +140,148 @@ components:
         <API key>` is also accepted. Does not apply to `GET /api/deposit-page`
         (session `token` query parameter).
 paths:
+  /api/aml-checks/{checkId}:
+    get:
+      operationId: get_api_aml_checks__checkId
+      summary: Get an AML check
+      description: >-
+        One AML check with the full provider `result`. A `PENDING` check is
+        refreshed from the provider when you read it, so polling this endpoint
+        (every few seconds) picks up the result; most checks settle within
+        seconds, complex address histories can take up to ~3 minutes. Checks
+        still pending after an hour are failed and refunded.
+
+
+        **Errors:** **404** unknown id (or a check belonging to another
+        merchant).
+
+
+        **Authentication:** `Authorization: <API key>` — send the raw key (no
+        `Bearer` prefix required). `Bearer <API key>` is still accepted for
+        compatibility.
+      tags:
+        - Partner
+        - Compliance
+      x-visibility: partner
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: Success
+        "400":
+          description: Bad request — validation error or business rule failure.
+        "401":
+          description: Unauthorized — missing or invalid API key.
+        "403":
+          description: Forbidden — insufficient permissions for this operation.
+        "500":
+          description: Internal server error
+  /api/aml-checks:
+    post:
+      operationId: post_api_aml_checks
+      summary: Run an AML address check
+      description: >-
+        Screens a wallet address for AML risk (Elliptic): risk score, risk
+        level, sanctions exposure and the risk detail behind them. Use it before
+        accepting a deposit from, or paying out to, an address you do not know.
+
+
+        **Price:** **1.50** per check, deducted from your balance in-kind (1.50
+        USDT or 1.50 USDC). The fee is reserved when the check starts and
+        **charged only when a result is delivered** — a `SKIPPED` check (the
+        address has no on-chain activity) and a `FAILED` check are returned to
+        your balance.
+
+
+        **Body (JSON):** `address` (required); `network` (required) — one of the
+        networks live on DCE: `TRX`, `BNB`, `POL` (`ETH` once Ethereum goes
+        live; testnets are not screenable); optional `referenceId` (unique per
+        merchant — a reused value returns **409**); optional `feeCurrency` +
+        `feeNetwork` (both or neither) to choose the balance that pays. Default
+        fee balance: the screened network (USDT, then USDC), then USDT on TRX,
+        then your largest balance.
+
+
+        **Response:** `{ success, check }` — **200** when settled (`status`
+        `COMPLETED`, `SKIPPED` or `FAILED`), **202** while the provider is still
+        working (`PENDING`; poll `GET /api/aml-checks/{checkId}`). `check`:
+        `id`, `referenceId`, `address`, `network`, `provider` (`elliptic`),
+        `status`, `riskScore` (decimal string 0–10, `null` = no risk triggers),
+        `riskLevel` (`low` 0–3 | `medium` 3–7 | `high` 7–10 | `null`),
+        `isSanctioned`, `sanctions` (`self`, `exposure` share/hops), `result`
+        (provider risk detail: contributions, cluster entities, triggered
+        rules), `fee` (`amount`, `currency`, `network`, `status` `RESERVED` |
+        `CHARGED` | `REFUNDED`), `error`, `createdAt`, `completedAt`. A
+        `COMPLETED` check is charged even in the rare case the provider returns
+        no risk data; `error` then says so and all risk fields are `null` — do
+        not read that as clean.
+
+
+        **Errors:** **400** `NETWORK_NOT_SUPPORTED` (with `supportedNetworks`),
+        `INVALID_ADDRESS`, `INSUFFICIENT_BALANCE` (with `fee`); **403**
+        non-merchant key or inactive merchant; **409** `DUPLICATE_REFERENCE`;
+        **429** `RATE_LIMITED` (platform-wide screening capacity, retry within a
+        minute — nothing is reserved); **503** `AML_UNAVAILABLE`.
+
+
+        **Authentication:** `Authorization: <API key>` — send the raw key (no
+        `Bearer` prefix required). `Bearer <API key>` is still accepted for
+        compatibility.
+      tags:
+        - Partner
+        - Compliance
+      x-visibility: partner
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: Success
+        "400":
+          description: Bad request — validation error or business rule failure.
+        "401":
+          description: Unauthorized — missing or invalid API key.
+        "403":
+          description: Forbidden — insufficient permissions for this operation.
+        "500":
+          description: Internal server error
+    get:
+      operationId: get_api_aml_checks
+      summary: List AML checks
+      description: >-
+        Your AML checks, newest first (without the `result` detail — fetch one
+        check for that).
+
+
+        **Query (all optional):** `page`, `limit` (max 100, default 20),
+        `status` (`PENDING` | `COMPLETED` | `SKIPPED` | `FAILED`), `network`,
+        `address`, `referenceId`.
+
+
+        **Response:** `checks`, `pagination` (`total`, `page`, `limit`,
+        `pages`), and `service` — `provider`, `feePerCheck` and the
+        `supportedNetworks` you can screen right now.
+
+
+        **Authentication:** `Authorization: <API key>` — send the raw key (no
+        `Bearer` prefix required). `Bearer <API key>` is still accepted for
+        compatibility.
+      tags:
+        - Partner
+        - Compliance
+      x-visibility: partner
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: Success
+        "400":
+          description: Bad request — validation error or business rule failure.
+        "401":
+          description: Unauthorized — missing or invalid API key.
+        "403":
+          description: Forbidden — insufficient permissions for this operation.
+        "500":
+          description: Internal server error
   /api/balance:
     get:
       operationId: get_api_balance
@@ -144,8 +292,8 @@ paths:
 
 
         **Query (both optional):** `currency` — `USDT` | `USDC`; `network` —
-        `TRX`, `ETH`, `BNB`, `SOL` (testnets: `TRX_SHASTA`, `SEP`, `tBNB`,
-        `SOL_DEVNET`).
+        `TRX`, `ETH`, `BNB`, `POL`, `SOL` (testnets: `TRX_SHASTA`, `SEP`,
+        `tBNB`, `POL_AMOY`, `SOL_DEVNET`).
 
 
         **Response:**
@@ -162,8 +310,10 @@ paths:
         `lastUpdatedAt`.
 
 
-        Currently only `USDT` on `TRX` is enabled for deposits and withdrawals;
-        other pairs appear once enabled.
+        Enabled today: `USDT` on `TRX` for deposits and withdrawals;
+        `USDT`/`USDC` on `BNB` (since 2026-09-08) and `POL` (since 2026-09-09)
+        for deposits, with `withdrawalEnabled: false` until withdrawals open on
+        each network. Other pairs appear once enabled.
 
 
         **Authentication:** `Authorization: <API key>` — send the raw key (no
@@ -172,6 +322,140 @@ paths:
       tags:
         - Partner
         - Balances
+      x-visibility: partner
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: Success
+        "400":
+          description: Bad request — validation error or business rule failure.
+        "401":
+          description: Unauthorized — missing or invalid API key.
+        "403":
+          description: Forbidden — insufficient permissions for this operation.
+        "500":
+          description: Internal server error
+  /api/compliance-checks/{checkId}:
+    get:
+      operationId: get_api_compliance_checks__checkId
+      summary: Get a compliance check
+      description: >-
+        One stored compliance verdict. Re-reading never re-checks or charges —
+        run a new check for a fresh verdict.
+
+
+        **Errors:** **404** unknown id (or a check belonging to another
+        merchant).
+
+
+        **Authentication:** `Authorization: <API key>` — send the raw key (no
+        `Bearer` prefix required). `Bearer <API key>` is still accepted for
+        compatibility.
+      tags:
+        - Partner
+        - Compliance
+      x-visibility: partner
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: Success
+        "400":
+          description: Bad request — validation error or business rule failure.
+        "401":
+          description: Unauthorized — missing or invalid API key.
+        "403":
+          description: Forbidden — insufficient permissions for this operation.
+        "500":
+          description: Internal server error
+  /api/compliance-checks:
+    post:
+      operationId: post_api_compliance_checks
+      summary: Run a TRON address compliance check
+      description: >-
+        Instant deny-list verdict for a TRON address: on a sanctions list (OFAC
+        SDN, EU, UK and others) or flagged for scams, ransomware, stolen funds
+        or fraud (`aml_risk`); USDT frozen by Tether (`usdt_frozen`); a
+        smart-contract address (`smart_contract`); a confirmed mass-spam sender
+        (`spam_sender`); or `clean`. Not a risk score — use `POST
+        /api/aml-checks` for a full Elliptic screening.
+
+
+        **Use it before sending:** screen the payout destination (`address`).
+        **After receiving:** screen who paid you with `depositId` — the check
+        runs on that deposit's on-chain sender, never on your deposit address.
+
+
+        **Price:** **1.00** per verdict, in-kind (USDT or USDC) from your
+        balance, debited when the verdict is returned. No verdict (service
+        unavailable, rate limit, invalid address) → nothing charged.
+
+
+        **Body (JSON):** exactly one of `address` (TRON, `T…`) or `depositId` (a
+        TRON deposit you received); optional `network` (`TRX`, the default —
+        TRON only); optional `referenceId` (unique per merchant, **409** when
+        reused); optional `feeCurrency` + `feeNetwork`.
+
+
+        **Response:** **200** `{ success, check }` — `id`, `referenceId`,
+        `address`, `network`, `depositId`, `verdict` (`blocked`, `category`,
+        `severity`, `reasonCode` e.g. `SANCTIONS_OFAC_SDN`, `label`,
+        `checkedAt`), `fee` (`amount`, `currency`, `network`, `status`
+        `CHARGED`), `createdAt`.
+
+
+        **Errors:** **400** `INVALID_REQUEST`, `INVALID_ADDRESS`,
+        `NETWORK_NOT_SUPPORTED`, `INSUFFICIENT_BALANCE`; **403** non-merchant
+        key or inactive merchant; **404** `DEPOSIT_NOT_FOUND`; **409**
+        `DUPLICATE_REFERENCE`; **422** `DEPOSIT_SENDER_UNKNOWN`; **429**
+        `RATE_LIMITED`; **503** `COMPLIANCE_UNAVAILABLE` — the verdict could not
+        be produced: retry, and **do not treat the address as clean**.
+
+
+        **Authentication:** `Authorization: <API key>` — send the raw key (no
+        `Bearer` prefix required). `Bearer <API key>` is still accepted for
+        compatibility.
+      tags:
+        - Partner
+        - Compliance
+      x-visibility: partner
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: Success
+        "400":
+          description: Bad request — validation error or business rule failure.
+        "401":
+          description: Unauthorized — missing or invalid API key.
+        "403":
+          description: Forbidden — insufficient permissions for this operation.
+        "500":
+          description: Internal server error
+    get:
+      operationId: get_api_compliance_checks
+      summary: List compliance checks
+      description: >-
+        Your compliance checks, newest first. Re-reading a stored verdict is
+        free.
+
+
+        **Query (all optional):** `page`, `limit` (max 100, default 20),
+        `blocked` (`true` | `false`), `category`, `address`, `depositId`,
+        `referenceId`.
+
+
+        **Response:** `checks`, `pagination`, and `service` (`feePerCheck`,
+        `supportedNetworks`).
+
+
+        **Authentication:** `Authorization: <API key>` — send the raw key (no
+        `Bearer` prefix required). `Bearer <API key>` is still accepted for
+        compatibility.
+      tags:
+        - Partner
+        - Compliance
       x-visibility: partner
       security:
         - ApiKeyAuth: []
@@ -223,10 +507,10 @@ paths:
         Allocates a chain deposit address for an end-user.
 
 
-        **Body (JSON):** `network` — one of `TRX`, `ETH`, `BNB`, `SOL`
-        (testnets: `TRX_SHASTA`, `SEP`, `tBNB`, `SOL_DEVNET`); `identifier`
-        (required); `referenceId` (optional). Currently only `TRX` deposits are
-        enabled.
+        **Body (JSON):** `network` — one of `TRX`, `ETH`, `BNB`, `POL`, `SOL`
+        (testnets: `TRX_SHASTA`, `SEP`, `tBNB`, `POL_AMOY`, `SOL_DEVNET`);
+        `identifier` (required); `referenceId` (optional). Deposits are enabled
+        per (currency, network) pair — see the Fees reference.
 
 
         If the user is linked to a merchant profile, that profile must be
@@ -468,14 +752,15 @@ paths:
 
         **Body (JSON):** `amount` — decimal **string**; `currency` (required) —
         `USDT` | `USDC`; `network` (required) — chain to pay out on (`TRX`,
-        `ETH`, `BNB`, `SOL`, or a testnet symbol); `destination` — payout
+        `ETH`, `BNB`, `POL`, `SOL`, or a testnet symbol); `destination` — payout
         address; optional `description`, `referenceId`.
 
 
         **Per-chain rules:** the `(currency, network)` pair must be enabled for
-        withdrawals (currently `USDT` on `TRX`) or the request fails with
-        **400** listing the enabled pairs. Balances are per-chain — funds on
-        other networks cannot cover the withdrawal. Total debited = `amount` +
+        withdrawals (`USDT` on `TRX` today; `BNB` and `POL` pairs open after
+        their first production deposits) or the request fails with **400**
+        listing the enabled pairs. Balances are per-chain — funds on other
+        networks cannot cover the withdrawal. Total debited = `amount` +
         commission + per-chain `networkFee` (quoted at submission from the asset
         fee matrix).
 

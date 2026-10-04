@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-07-30_
+_Last updated: 2026-09-17_
 
 The deposits API allows you to accept customer payments by creating deposit addresses and tracking payment status. This guide covers all aspects of deposit management including address creation, URL generation, payment tracking, and how deposits are credited and charged.
 
@@ -19,9 +19,11 @@ The deposit flow consists of three main steps:
 
 ### Supported currencies and networks
 
-Deposits are stablecoin-only: `USDT` and `USDC`, segmented per network (`TRX`, `ETH`, `BNB`, `SOL`; testnets `TRX_SHASTA`, `SEP`, `tBNB`, `SOL_DEVNET`). Balances are tracked **per (currency, network) pair** — funds deposited on one chain can only be withdrawn on that same chain.
+Deposits are stablecoin-only: `USDT` and `USDC`, segmented per network (`TRX`, `ETH`, `BNB`, `POL`, `SOL`; testnets `TRX_SHASTA`, `SEP`, `tBNB`, `POL_AMOY`, `SOL_DEVNET`). Balances are tracked **per (currency, network) pair** — funds deposited on one chain can only be withdrawn on that same chain.
 
-> **Availability:** USDT on TRX (and its `TRX_SHASTA` testnet twin) is the pair enabled today. Other pairs (USDT/USDC on ETH, BNB, SOL) are coming soon / available on request. Requests for a network with no enabled pair are rejected with `400` and the message `Deposits on {network} are not currently supported`.
+> **Availability:** USDT on TRX (and its `TRX_SHASTA` testnet twin), USDT/USDC on BNB (since 2026-09-08) and USDT/USDC on POL (since 2026-09-09) are enabled for deposits today; ETH follows next, one network at a time. Requests for a network with no enabled pair are rejected with `400` and the message `Deposits on {network} are not currently supported`.
+>
+> **EVM networks share one deposit address per client.** The address issued for an `identifier` on `BNB` is the same address on `POL` (and on `ETH` once live); asking for it on a sibling EVM network returns the identical address. Funds are credited per `(currency, network)` — state the network to your customer — but a payment sent on the wrong EVM network is recoverable by support because the platform holds the key on every EVM network.
 
 ## Creating Deposit Addresses
 
@@ -46,7 +48,7 @@ curl -X POST "${DCE_BASE_URL}/api/deposit-address" \
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `network` | string | Yes | One of `TRX`, `ETH`, `BNB`, `SOL`, `TRX_SHASTA`, `SEP`, `tBNB`, `SOL_DEVNET` (`NetworkSymbol`). Only networks with an enabled (currency, network) pair are accepted — TRX today. |
+| `network` | string | Yes | One of `TRX`, `ETH`, `BNB`, `POL`, `SOL`, `TRX_SHASTA`, `SEP`, `tBNB`, `POL_AMOY`, `SOL_DEVNET` (`NetworkSymbol`). Only networks with an enabled (currency, network) pair are accepted — TRX, BNB and POL today. |
 | `identifier` | string | Yes | Your end-user or customer identifier |
 | `referenceId` | string | No | Optional business reference (order id, invoice id, etc.) |
 
@@ -161,7 +163,7 @@ curl -X POST "${DCE_BASE_URL}/api/deposit-url" \
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `network` | string | Yes | Network symbol (`NetworkSymbol`); only networks with an enabled pair are accepted — TRX today |
+| `network` | string | Yes | Network symbol (`NetworkSymbol`); only networks with an enabled pair are accepted — TRX, BNB and POL today |
 | `identifier` | string | Yes | Your end-user or customer identifier |
 | `referenceId` | string | No | Optional business reference; appended to the URL as `ref` |
 | `requestedCurrency` | string | No | 3-letter display currency for the hosted page (e.g. `USD`) |
@@ -475,7 +477,7 @@ curl -X POST "${DCE_BASE_URL}/api/deposits" \
 |-----------|------|----------|-------------|
 | `amount` | string | Yes | Deposit amount as a positive decimal string (up to 18 decimal places) |
 | `currency` | string | Yes | Token symbol: `USDT` or `USDC` |
-| `network` | string | Yes | Network symbol (`TRX`, `ETH`, `BNB`, `SOL`, or a testnet) |
+| `network` | string | Yes | Network symbol (`TRX`, `ETH`, `BNB`, `POL`, `SOL`, or a testnet) |
 | `source` | string | Yes | Source of the deposit |
 | `description` | string | No | Human-readable description |
 | `metadata` | object | No | Additional data to associate with the deposit |
@@ -596,8 +598,9 @@ How incoming deposits are credited and what they are charged:
 ### Customer deposits (issued deposit addresses)
 
 - Credited to your **available** balance for the deposit's (currency, network) pair when confirmed.
-- Charged the percentage **deposit commission** (recorded on the deposit as `commission`, at `commissionRate`) — see the [Fees Reference](https://docs.dcepay.io/docs/fees-reference).
-- **Address activation fee:** a fixed 0.5 fee (in the deposit's currency) is charged once per deposit address, on the first confirmed deposit to that address. It appears in your charge ledger as `Address activation fee (fixed)` and is mirrored on the deposit's `fee` field.
+- Charged the percentage **deposit commission** (recorded on the deposit as `commission`, at `commissionRate`), with a floor of **0.50 USDT per deposit** (0.10 before 2026-09-03) — see the [Fees Reference](https://docs.dcepay.io/docs/fees-reference).
+- **Address activation fee:** a fixed **1.00** fee (0.50 before 2026-09-03; in the deposit's currency) is charged once per deposit address, on the first confirmed deposit to that address. It appears in your charge ledger as `Address activation fee (fixed)` and is mirrored on the deposit's `fee` field.
+- **Confirmation timing:** the deposit confirms once the transfer is verified on-chain. Larger deposits (10 USDT and above) are consolidated to the platform wallet as part of confirmation, which can add a short delay; smaller deposits confirm on verification and are consolidated later. Neither affects the amount credited.
 - **Small-deposit exemption:** deposits under **1 USD equivalent** are charged no deposit fee and trigger **no merchant deposit callback**. They are still credited and appear in your deposit list.
 
 ### Wallet top-ups (direct deposits)
@@ -605,7 +608,7 @@ How incoming deposits are credited and what they are charged:
 Deposits to your own self-custody top-up address (funding your balance, e.g. to cover withdrawals) behave differently:
 
 - **Sweep-gated crediting:** the deposit is credited to your **pending** balance first and moves to **available** only once the sweep to the master wallet lands. Top-up funds may sit in pending briefly.
-- They skip the percentage commission and the activation fee. Instead a **flat direct-deposit fee** is charged in-kind (default 1 USDT/USDC; configurable per merchant). It appears in your charge ledger as `Direct deposit fee (fixed)` and is mirrored on the deposit's `fee` field.
+- They skip the percentage commission and the activation fee. Instead a **flat direct-deposit fee** is charged in-kind (1.20 USDT on TRON since 2026-09-03, 1.00 before; **0.20** on BNB Smart Chain since 2026-09-28; configurable per merchant, capped per network). It appears in your charge ledger as `Direct deposit fee (fixed)` and is mirrored on the deposit's `fee` field.
 
 ## Error Handling
 
@@ -613,7 +616,7 @@ Deposits to your own self-custody top-up address (funding your balance, e.g. to 
 
 | Error | Description | Resolution |
 |-------|-------------|------------|
-| `Deposits on {network} are not currently supported` | The network has no enabled (currency, network) pair | Use an enabled network (TRX today) |
+| `Deposits on {network} are not currently supported` | The network has no enabled (currency, network) pair | Use an enabled network (TRX, BNB or POL today) |
 | `Invalid request data` | Validation failed (see `details`) | Fix the fields listed in `details` |
 | `Deposit address already exists` | The address was already generated | Reuse the existing address (`409`) |
 | `Unauthorized` / `Authentication required` | Missing or invalid API key | Check your `Authorization` header |

@@ -72,12 +72,14 @@ Unrecognized filter values are ignored (the filter is simply not applied) rather
       "balanceAfterRaw": "999.495",
       "createdAt": "2026-07-29T10:30:00.000Z",
       "createdAtGmt8": "2026-07-29T18:30:00.000Z",
+      "referenceId": "order_123",
       "description": "Customer payment",
       "category": "Customer Payment",
       "tags": ["customer-payment", "crypto"],
       "metadata": {
         "txHash": "d0e1f2a3b4c5...",
-        "webhookPayload": { "referenceId": "order_123" }
+        "webhookPayload": { "referenceId": "order_123" },
+        "internalFee": { "deposit": "1.005" }
       }
     }
   ],
@@ -105,14 +107,15 @@ Unrecognized filter values are ignored (the filter is simply not applied) rather
 | `age` | Human-readable age, e.g. `5 mins ago` |
 | `from` / `to` | Source and destination addresses where known |
 | `amount` | **Signed net balance change** as a decimal string: positive for deposits (`amount - fee`), negative for withdrawals (`-(amount + fee)`) |
-| `fee` | Total fee attributed to the transaction (deposit fee, or withdrawal commission/fee, plus any internal fee recorded in metadata) |
+| `fee` | Total fee attributed to the transaction: for deposits, commission + activation fee (or the flat top-up fee); for withdrawals, commission margin + network fee. Falls back to `metadata.internalFee` for legacy rows |
+| `referenceId` | Your merchant reference for the deposit or withdrawal (empty string when none was supplied). Also mirrored at `metadata.webhookPayload.referenceId` |
 | `token` | Currency of the transaction (`USDT`, `USDC`) |
 | `type` | `DEPOSIT` or `WITHDRAWAL` |
 | `status` | `PENDING`, `CONFIRMED`, `FAILED`, or `CANCELLED` |
 | `balanceBefore` / `balanceAfter` | Running balance around this transaction (see note below) |
 | `amountRaw`, `feeRaw`, `balanceBeforeRaw`, `balanceAfterRaw` | Same values as their formatted counterparts, serialized as decimal strings |
 | `createdAt` / `createdAtGmt8` | Creation time in UTC and shifted to GMT+8 |
-| `description`, `category`, `tags`, `metadata` | Descriptive fields; `metadata` may include `txHash`, `fromAddress`, `toAddress`, and the webhook payload with your `referenceId` |
+| `description`, `category`, `tags`, `metadata` | Descriptive fields; `metadata` may include `txHash`, `fromAddress`, `toAddress`, the webhook payload with your `referenceId`, and `internalFee` (`{ deposit }` / `{ withdrawal }`) |
 
 #### The `balance` object
 

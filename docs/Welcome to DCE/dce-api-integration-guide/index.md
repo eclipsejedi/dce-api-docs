@@ -5,9 +5,9 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-07-30_
+_Last updated: 2026-09-17_
 
-Welcome to the DCE API documentation for merchants and integrators. These guides help you integrate with the platform to accept stablecoin deposits (USDT on TRON today; more currencies and networks coming soon), manage per-network withdrawals, and automate operations with webhooks.
+Welcome to the DCE API documentation for merchants and integrators. These guides help you integrate with the platform to accept stablecoin deposits (USDT on TRON, and USDT/USDC on BSC and Polygon; ETH next), manage per-network withdrawals, and automate operations with webhooks.
 
 ## 📋 Table of Contents
 
@@ -27,6 +27,8 @@ Welcome to the DCE API documentation for merchants and integrators. These guides
 ### 🔧 Advanced Features
 - [Deposit URLs](https://docs.dcepay.io/docs/deposits#deposit-urls) - Create hosted payment pages for customers
 - [Exchange Rates](https://docs.dcepay.io/docs/exchange-rates) - Get current exchange rates for currency conversion
+- [AML Address Checks](https://docs.dcepay.io/docs/aml-checks) - Screen wallet addresses for AML and sanctions risk (Elliptic)
+- [TRON Address Compliance Checks](https://docs.dcepay.io/docs/compliance-checks) - Instant deny-list verdict before sending to, or after receiving from, a TRON address
 
 ### 🔗 Integration Tools
 - [Webhooks](https://docs.dcepay.io/docs/webhooks) - Handle real-time payment notifications

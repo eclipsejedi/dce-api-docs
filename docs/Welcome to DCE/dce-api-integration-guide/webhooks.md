@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-07-31_
+_Last updated: 2026-09-11_
 
 This guide covers only merchant-facing webhooks sent by DCE for deposit and withdrawal notifications.
 
@@ -17,19 +17,21 @@ Each request includes:
 
 - `Content-Type: application/json`
 - `X-Webhook-Event`: event name
-- `X-Webhook-Signature`: lowercase hex HMAC-SHA256 signature of the exact raw request body, using your `webhookSecret`
+- `X-Webhook-Signature`: lowercase hex HMAC-SHA256 signature of the exact raw request body, keyed with your signing secret. Sent only once you have generated a secret (see **Webhook setup**); an unsigned delivery carries no header at all
 - `X-Webhook-Id`: stable delivery id — identical on every redelivery of the same event
 
 The JSON body also carries the same id as an `eventId` field. Deduplicate on it: delivery is **at-least-once**, so the same event can arrive more than once.
 
 ## Webhook setup
 
-Configure these fields on your merchant profile:
+In the merchant dashboard, open **Account → Integration → Webhook**:
 
-- `webhookUrl`
-- `webhookSecret`
-- `webhookEnabled`
-- Optional: `webhookEvents`, `webhookTimeout`, `webhookRetryCount`
+1. Save your HTTPS `webhookUrl` (MFA/passkey step-up). Saving enables deliveries.
+2. Press **Generate signing secret** (MFA/passkey step-up). The `whsec_…` value is shown **once** — store it in your server's secret store. Afterwards only a masked prefix is visible; **Rotate signing secret** issues a new one and the old one stops signing immediately.
+
+Until a signing secret exists, deliveries are sent **without** `X-Webhook-Signature`. Treat a missing or invalid header as unverified and reject it in production.
+
+Optional profile fields set by your DCE contact: `webhookEvents`, `webhookTimeout`, `webhookRetryCount`.
 
 ## Events
 
@@ -84,6 +86,8 @@ function verifyDceSignature(rawBody, signatureHeader, webhookSecret) {
 - A delivery only counts as acknowledged when your endpoint returns a `2xx` status **and** a JSON body containing `{ "ok": true }`. A `2xx` without that acknowledgement is retried.
 - Failed or unacknowledged deliveries (non-2xx, timeout, network error, missing ack) are retried with exponential backoff (1s doubling, capped at 30s) up to `webhookRetryCount` (default `3`).
 - Redeliveries reuse the same `eventId` / `X-Webhook-Id`, so deduplicating on `eventId` makes retries safe.
+- **Circuit breaker.** If your endpoint keeps failing, deliveries to it are paused after 10 consecutive failures for a cool-off (15 minutes, doubling up to 2 hours), then a single probe delivery is attempted; success resumes normal delivery. Events raised during the pause are queued, not dropped, and are delivered once the endpoint recovers. Our operations team is alerted when a breaker opens and can resend individual events on request.
+- **Timestamps.** `confirmedAt` / `failedAt` in the payload are ISO-8601 in **GMT+8** with an explicit `+08:00` offset (for example `2026-09-03T10:15:22+08:00`). The instant is unambiguous; the wall-clock part matches the platform's reporting timezone.
 - For withdrawals, your own `referenceId` is also an idempotency key on the API side: resubmitting a withdrawal with an already-used `referenceId` returns `409 Duplicate referenceId` and never creates a second payout.
 
 ## Sample payloads
@@ -96,7 +100,7 @@ The event name travels in the `X-Webhook-Event` header; the body carries a `type
 {
   "type": "deposit",
   "depositId": "clx0d3p0s1t000001",
-  "amount": "100.00",
+  "amount": "1000.00",
   "currency": "USDT",
   "status": "confirmed",
   "identifier": "user123",
@@ -105,22 +109,26 @@ The event name travels in the `X-Webhook-Event` header; the body carries a `type
   "address": "TX7uW4mP7cLoBnUYqkNhVpQvNczpxxxxxx",
   "isMerchantDirectDeposit": false,
   "feeCharges": {
-    "amount": "0.25",
-    "percentage": "0.0025",
+    "amount": "1.00",
+    "percentage": "0.001",
     "type": "PERCENTAGE",
     "activationFee": {
-      "amount": "0.5",
+      "amount": "1",
       "charged": true
     }
   },
-  "receivableAmount": "99.25",
+  "receivableAmount": "998.00",
+  "confirmedAt": "2026-09-03T10:15:22+08:00",
   "eventId": "b3a1c2d4-0000-0000-0000-000000000000"
 }
 ```
 
-- `feeCharges.activationFee` reports the one-time address activation fee (0.5) charged on the first confirmed deposit to an address.
-- For merchant wallet top-ups (`isMerchantDirectDeposit: true`) the `feeCharges.type` is `FIXED_AMOUNT` and `amount` is the flat direct-deposit fee.
+- `referenceId` is the reference you supplied when requesting the deposit address (or deposit URL) — use it to match the callback to your order.
+- `feeCharges.amount` is the deposit commission: your rate × amount, with a floor of 0.50 USDT per deposit (0.10 before 2026-09-03).
+- `feeCharges.activationFee` reports the one-time address activation fee (1.00; 0.50 before 2026-09-03) charged on the first confirmed deposit to an address.
+- For merchant wallet top-ups (`isMerchantDirectDeposit: true`) the `feeCharges.type` is `FIXED_AMOUNT` and `amount` is the flat direct-deposit fee (1.20).
 - `receivableAmount` = `amount` − total fees (commission + activation fee, or the flat top-up fee).
+- `confirmedAt` is the confirmation time in GMT+8 (`+08:00`).
 - Deposits below 1 USD equivalent are fee-exempt and no callback is sent.
 
 ### `deposit.failed`
@@ -136,6 +144,7 @@ The event name travels in the `X-Webhook-Event` header; the body carries a `type
   "reason": "Deposit failed",
   "txHash": "0x7f9fade1c0d57a7af66ab4ead79fade1c0d57a7af66ab4ead7c2c2eb7b11a91385",
   "address": "TX7uW4mP7cLoBnUYqkNhVpQvNczpxxxxxx",
+  "failedAt": "2026-09-03T10:15:22+08:00",
   "eventId": "b3a1c2d4-0000-0000-0000-000000000001"
 }
 ```
@@ -154,18 +163,20 @@ The event name travels in the `X-Webhook-Event` header; the body carries a `type
   "address": "TX7uW4mP7cLoBnUYqkNhVpQvNczpxxxxxx",
   "identifier": "your-reference-id",
   "feeCharges": {
-    "amount": "1.00",
-    "percentage": "0",
-    "type": "FIXED_AMOUNT",
-    "networkFee": "1.00"
+    "amount": "0",
+    "percentage": "0.001",
+    "type": "NONE",
+    "networkFee": "1.20"
   },
-  "receivableAmount": "199.00",
+  "receivableAmount": "200.00",
+  "confirmedAt": "2026-09-03T10:15:22+08:00",
   "eventId": "b3a1c2d4-0000-0000-0000-000000000002"
 }
 ```
 
 - `referenceId` (and `identifier`) is **your** merchant `referenceId` as submitted with the withdrawal — not an internal id — so you can correlate the callback with the request you made.
-- `feeCharges` is **always present**. `amount` is the commission (`"0"` with `type: "NONE"` when no commission is charged); `networkFee` is the per-chain fee charged on top of the withdrawal amount. `receivableAmount` = `amount` − commission.
+- `feeCharges` is **always present**. `networkFee` is the per-chain fee quoted at submission (1.20 on TRX, or 2.50 when the destination held no USDT). `amount` is the commission **margin above the network fee** — `"0"` with `type: "NONE"` whenever your commission does not exceed the network fee, which is the common case at 0.1%. The total charged on top of the withdrawal is `amount + networkFee`, i.e. `max(commission, networkFee)`.
+- `receivableAmount` = `amount` − commission margin. The destination always receives the full withdrawal `amount`.
 
 ### `withdrawal.failed`
 
@@ -181,6 +192,7 @@ The event name travels in the `X-Webhook-Event` header; the body carries a `type
   "referenceId": "your-reference-id",
   "address": "TX7uW4mP7cLoBnUYqkNhVpQvNczpxxxxxx",
   "identifier": "your-reference-id",
+  "failedAt": "2026-09-03T10:15:22+08:00",
   "eventId": "b3a1c2d4-0000-0000-0000-000000000003"
 }
 ```
@@ -200,21 +212,21 @@ There are three different paths; only the first one is the merchant integration 
 
 ### 1. Outbound webhooks to your URL (merchant integration)
 
-1. You configure **`webhookUrl`**, **`webhookSecret`**, **`webhookEnabled`**, and optionally **`webhookEvents`**, **`webhookTimeout`**, and **`webhookRetryCount`** on the merchant profile (for example via user/merchant APIs).
+1. You save **`webhookUrl`** and generate a **signing secret** in the dashboard (**Account → Integration → Webhook**); saving the URL switches **`webhookEnabled`** on. **`webhookEvents`**, **`webhookTimeout`**, and **`webhookRetryCount`** are optional profile fields.
 2. When a deposit, withdrawal, or underlying transaction changes state, the event is written to a **durable outbox row in the same database transaction as the ledger change**. After commit, a dispatcher delivers it (creating a **`webhookLog`** row whose id doubles as the on-the-wire `eventId`) by **POST**ing JSON to your `webhookUrl`. A cron sweeper re-dispatches any outbox row a crash left behind, so delivery is **at-least-once** and consumers must deduplicate by `eventId`.
 3. The HTTP request includes:
    - **`Content-Type: application/json`**
    - **`X-Webhook-Event`** — the event name (for example `deposit.confirmed`, `withdrawal.failed`)
    - **`X-Webhook-Id`** — the stable delivery id (identical on every redelivery; also present in the body as `eventId`)
-   - **`X-Webhook-Signature`** — lowercase hex **HMAC-SHA256** of the **exact raw body bytes**, keyed by `webhookSecret` (same string as `JSON.stringify(payload)` on the server). **Verify using the raw body**, not a re-serialized `JSON.stringify` of a parsed object, so key order cannot break verification.
+   - **`X-Webhook-Signature`** — lowercase hex **HMAC-SHA256** of the **exact raw body bytes**, keyed by your signing secret (same string as `JSON.stringify(payload)` on the server). **Verify using the raw body**, not a re-serialized `JSON.stringify` of a parsed object, so key order cannot break verification. The header is omitted entirely if you have not generated a signing secret.
 4. **Subscription filter:** if `webhookEvents` is a **non-empty** string array, only listed events are sent. If the field is missing or not parseable as a string array, there is no filter. An **empty** array means nothing is sent.
 5. **Acknowledgement & retries:** a delivery is final only when your endpoint returns a **2xx** status **and** a JSON body containing **`"ok": true`**. Anything else — failed HTTP status, timeout, network error, or a 2xx without the ack — schedules a retry with exponential backoff (1s doubling, capped at 30s) up to `webhookRetryCount` (default **3**). Operators can run the **`webhook-retries`** background job to process due retries. Redeliveries reuse the same `eventId`.
 
 **Event names in code** (not `payout.*`): `deposit.confirmed` | `deposit.failed`; `withdrawal.confirmed` | `withdrawal.failed`; `transaction.confirmed` | `transaction.failed`. Pending states (`deposit.pending`, `withdrawal.pending`) exist internally but do not currently produce outbound merchant deliveries.
 
-### 2. Internal ingestion — `POST /api/webhook/event`
+### 2. Internal ingestion — `POST /api/webhook/event` (retired 2026-09-07)
 
-This endpoint is **admin-only** (`admin:write`). It accepts callbacks from trusted upstream systems using **`WEBHOOK_SECRET`**, **`x-signature`** (hex HMAC-SHA256 of the JSON body after **recursive alphabetical key sorting**), and **`x-timestamp`** (Unix ms, ±5 minutes). It is **not** the URL you publish as a merchant. Successful processing updates core records via **`WebhookHandler`** and may trigger **outbound** deliveries in (1).
+This operator-only route received callbacks from the retired legacy provider and now answers `410 Gone`. It was never the URL you publish as a merchant; provider callbacks arrive on the chain-provider routes in (3).
 
 ### 3. Chain-provider callbacks
 
@@ -224,19 +236,19 @@ Additional routes under **`/api/webhook/*`** (for example chain adapters) handle
 
 **Outbound webhooks (merchant integration):** DCE POSTs JSON to your configured `webhookUrl` when deposits, withdrawals, or ledger transactions change state. The **canonical** description (headers, `X-Webhook-Signature`, retries, subscription filters) is in **How the system delivers webhooks** at the top of this page.
 
-**Inbound operator route:** `POST /api/webhook/event` is for **admin/system ingestion** only (signed with `WEBHOOK_SECRET`). It is **not** the URL you publish as a merchant.
+**Inbound operator route:** `POST /api/webhook/event` is retired (`410`). It was never the URL you publish as a merchant.
 
 **Settlement notifications:** Outbound webhook event names in code are **`deposit.*`**, **`withdrawal.*`**, and **`transaction.*`**. Do not assume `settlement.*` events are emitted on the same merchant webhook channel unless your account team explicitly confirms it—use the Settlements API for settlement state when in doubt.
 
 ## Webhook setup (merchant)
 
-Configure **`webhookUrl`**, **`webhookSecret`**, **`webhookEnabled`**, and optionally **`webhookEvents`**, **`webhookTimeout`**, and **`webhookRetryCount`** on the **merchant profile** (via user/merchant APIs).
+Save **`webhookUrl`** and generate your **signing secret** in the dashboard (**Account → Integration → Webhook**). **`webhookEvents`**, **`webhookTimeout`**, and **`webhookRetryCount`** are optional profile fields.
 
 Your HTTPS endpoint should:
 
 1. Accept **POST** requests with `Content-Type: application/json`
 2. Return **`2xx`** with a JSON body containing **`{ "ok": true }`** after the event is safely accepted (move heavy work async if needed) — a 2xx **without** that acknowledgement is treated as undelivered and retried
-3. Verify **`X-Webhook-Signature`** (hex HMAC-SHA256 of the **raw body** with `webhookSecret`)
+3. Verify **`X-Webhook-Signature`** (hex HMAC-SHA256 of the **raw body** with your signing secret) and reject requests where the header is missing or does not match
 4. Implement **idempotency** keyed on the payload's **`eventId`** (delivery is at-least-once)
 
 ## Outbound event names (current code)
@@ -252,9 +264,11 @@ Your HTTPS endpoint should:
 
 The event name travels in the **`X-Webhook-Event`** header. Payloads carry a `type` field (`deposit` | `withdrawal` | `transaction`), a `status` field, a stable `eventId`, plus business fields (see the sample payloads earlier on this page). Do not rely on a generic `{ data, metadata }` envelope unless you normalize it yourself—integrate against the header event name and the documented fields.
 
-## Internal: `POST /api/webhook/event`
+## Internal: `POST /api/webhook/event` (retired)
 
-**Purpose:** ingest upstream/system events for processing by `WebhookHandler` (operator tooling; **not** the merchant callback URL).
+**Status:** retired on 2026-09-07 — answers `410 Gone`. The description below is kept for historical reference only.
+
+**Purpose (historical):** ingest upstream/system events for processing by `WebhookHandler` (operator tooling; **not** the merchant callback URL).
 
 **Auth:** API key with `admin:write`, plus server `WEBHOOK_SECRET`.
 
@@ -277,7 +291,7 @@ The event name travels in the **`X-Webhook-Event`** header. Payloads carry a `ty
 
 ### Merchant outbound deliveries (`X-Webhook-Signature`)
 
-DCE signs the **exact raw JSON body bytes** sent in the webhook POST using your **`webhookSecret`**. The signature is **lowercase hex** HMAC-SHA256 and is sent in the **`X-Webhook-Event`** / **`X-Webhook-Signature`** headers (see **How the system delivers webhooks**).
+DCE signs the **exact raw JSON body bytes** sent in the webhook POST using your **signing secret** (generated once in the dashboard, `whsec_…`). The signature is **lowercase hex** HMAC-SHA256 and is sent in the **`X-Webhook-Event`** / **`X-Webhook-Signature`** headers (see **How the system delivers webhooks**).
 
 **Important:** verify the signature against the **raw HTTP body string** captured before JSON parsing. Re-stringifying `JSON.parse` output can break verification due to key ordering differences.
 

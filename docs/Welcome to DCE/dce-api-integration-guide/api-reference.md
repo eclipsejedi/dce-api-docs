@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-07-30_
+_Last updated: 2026-10-05_
 
 This document provides a comprehensive reference for DCE API HTTP endpoints. Unless otherwise noted, routes require API key authentication.
 
@@ -40,7 +40,7 @@ The hosted deposit browser flow uses `GET /api/deposit-page?token=...` and `GET 
 Balances and money movement are segmented per **(currency, network)** pair:
 
 - `currency`: `USDT`, `USDC`
-- `network`: `TRX`, `ETH`, `BNB`, `SOL` (testnets: `TRX_SHASTA`, `SEP`, `tBNB`, `SOL_DEVNET`)
+- `network`: `TRX`, `ETH`, `BNB`, `POL`, `SOL` (testnets: `TRX_SHASTA`, `SEP`, `tBNB`, `POL_AMOY`, `SOL_DEVNET`)
 
 **Currently enabled for deposits and withdrawals: USDT on TRX** (and its `TRX_SHASTA` testnet twin). The other pairs (USDT/USDC on ETH, BNB, SOL) exist in the capability matrix but are disabled until verified — they are coming soon and can be enabled on request without an integration change on your side.
 
@@ -48,7 +48,7 @@ Key consequences:
 
 - There is **no cross-chain fungibility**: a withdrawal draws only from the same chain's balance. Funds deposited on TRX cannot be withdrawn on ETH.
 - Requests referencing a disabled pair are rejected, e.g. `{"error": "Withdrawals of USDT on ETH are not supported"}` or `{"error": "Deposits of USDC on TRX are not supported"}`.
-- Withdrawals require a `network`, and the per-network `networkFee` is quoted at submission time. The quoted fee is what you are charged.
+- Withdrawals require a `network`, and the per-network `networkFee` is quoted at submission time (1.20 USDT on TRX; 2.50 when the destination holds no USDT). The quoted fee is what you are charged, as a floor under your commission.
 
 ## Common Response Formats
 
@@ -88,7 +88,7 @@ Get per-(currency, network) balances. Balances are segmented per chain — depos
 
 **Query Parameters:**
 - `currency` (optional): Token symbol (`USDT`, `USDC`)
-- `network` (optional): Network symbol (`TRX`, `ETH`, `BNB`, `SOL`, or a testnet symbol)
+- `network` (optional): Network symbol (`TRX`, `ETH`, `BNB`, `POL`, `SOL`, or a testnet symbol)
 
 **Response (both `currency` and `network` supplied — single balance row):**
 ```json
@@ -350,6 +350,32 @@ if (!response.ok) {
 const deposit = await response.json();
 ```
 
+### AML address checks
+
+#### POST /api/aml-checks
+Screen a wallet address (Elliptic). Body: `address`, `network` (`TRX`, `BNB`, `POL`), optional `referenceId`, optional `feeCurrency` + `feeNetwork`. **1.50** per delivered result, reserved from your balance and charged only on `COMPLETED`. Returns `200` when settled, `202` while `PENDING`.
+
+#### GET /api/aml-checks
+Paginated history (`page`, `limit`, `status`, `network`, `address`, `referenceId`) plus `service.feePerCheck` and `service.supportedNetworks`.
+
+#### GET /api/aml-checks/{checkId}
+One check with the full risk `result`; refreshes a `PENDING` check from the provider.
+
+Full field list, errors and examples: [AML Address Checks](https://docs.dcepay.io/docs/aml-checks).
+
+### TRON address compliance checks
+
+#### POST /api/compliance-checks
+Instant deny-list verdict for a TRON address. Body: exactly one of `address` (screen before sending) or `depositId` (screen the sender of a deposit you received); optional `referenceId`, `feeCurrency` + `feeNetwork`. **1.00** per verdict; no verdict → no charge.
+
+#### GET /api/compliance-checks
+Paginated history (`page`, `limit`, `blocked`, `category`, `address`, `depositId`, `referenceId`) plus `service.feePerCheck`.
+
+#### GET /api/compliance-checks/{checkId}
+One stored verdict (re-reading is free and never re-checks).
+
+Full field list, guidance and errors: [TRON Address Compliance Checks](https://docs.dcepay.io/docs/compliance-checks).
+
 ### Withdrawals
 
 #### GET /api/withdrawals
@@ -453,7 +479,7 @@ Create a new withdrawal request (on-chain payout). Requires an API key with writ
 }
 ```
 
-**Fees:** the total debited from your balance is `amount + commission + networkFee`. The per-network `networkFee` is quoted from the capability matrix at submission and locked in — you are charged the quoted fee even if the finalized on-chain cost differs.
+**Fees:** the total debited from your balance is `amount + max(commission, networkFee)`. The per-network `networkFee` is quoted at submission and locked in — you are charged the quoted fee even if the finalized on-chain cost differs — and acts as a floor under your commission; the reported `commission` is only the margin above it. See the [Fees Reference](https://docs.dcepay.io/docs/fees-reference) for the current schedule.
 
 **Idempotency via `referenceId`:** the `referenceId` is unique per merchant account. Reusing a `referenceId` never creates a second payout — the duplicate submission is rejected with `409`:
 
@@ -470,6 +496,7 @@ If a previous attempt with that `referenceId` ended in `FAILED` or `CANCELLED`, 
 
 | Status | Body (`error`) | Cause |
 |---|---|---|
+| `400` | `Destination is not a valid … address for <network>` (`code: INVALID_DESTINATION`) | Destination fails the network's address format (e.g. a TRON address on an EVM network); checked before any reserve |
 | `400` | `Withdrawal amount must be greater than zero` | Non-positive amount |
 | `400` | `Withdrawals of <currency> on <network> are not supported` | Disabled (currency, network) pair |
 | `400` | `Amount below minimum withdrawal` (includes `minWithdrawal`, `currency`, `network`) | Below the pair's minimum |
@@ -563,7 +590,7 @@ const data = await response.json();
 ```
 
 #### POST /api/deposit-address
-Create a new deposit address for customer deposits. Addresses are per network and receive any supported token on that chain; no address is issued for a network with no deposit-enabled pair (`400` — `Deposits on <network> are not currently supported`).
+Create a new deposit address for customer deposits. Addresses are per network and receive any supported token on that chain; no address is issued for a network with no deposit-enabled pair (`400` — `Deposits on <network> are not currently supported`), and a network the platform does not currently serve answers `503` (`code: NETWORK_NOT_ENABLED`).
 
 An **address activation fee** (fixed, charged once per address activation) may apply on the first deposit to a new address — see [Fees Reference](https://docs.dcepay.io/docs/fees-reference).
 
@@ -974,7 +1001,7 @@ DCE sends signed POST callbacks to your configured `webhookUrl` for events such 
 
 For payload shapes, signature verification, and retry behavior in full, see [Webhooks](https://docs.dcepay.io/docs/webhooks).
 
-**Note:** `POST /api/webhook/event` is an operator-only internal ingestion route — it is **not** your merchant webhook URL. You configure `webhookUrl` on your merchant profile and receive outbound POSTs from DCE.
+**Note:** `POST /api/webhook/event` was an operator-only internal ingestion route and is retired (`410`) — it was never your merchant webhook URL. You configure `webhookUrl` on your merchant profile and receive outbound POSTs from DCE.
 
 **Example Webhook Handler:**
 ```javascript

@@ -6,7 +6,8 @@ excerpt: >-
 
 
   **Query (both optional):** `currency` — `USDT` | `USDC`; `network` — `TRX`,
-  `ETH`, `BNB`, `SOL` (testnets: `TRX_SHASTA`, `SEP`, `tBNB`, `SOL_DEVNET`).
+  `ETH`, `BNB`, `POL`, `SOL` (testnets: `TRX_SHASTA`, `SEP`, `tBNB`, `POL_AMOY`,
+  `SOL_DEVNET`).
 
 
   **Response:**
@@ -22,8 +23,10 @@ excerpt: >-
   (available minus the network fee, floored at 0), and `lastUpdatedAt`.
 
 
-  Currently only `USDT` on `TRX` is enabled for deposits and withdrawals; other
-  pairs appear once enabled.
+  Enabled today: `USDT` on `TRX` for deposits and withdrawals; `USDT`/`USDC` on
+  `BNB` (since 2026-09-08) and `POL` (since 2026-09-09) for deposits, with
+  `withdrawalEnabled: false` until withdrawals open on each network. Other pairs
+  appear once enabled.
 
 
   **Authentication:** `Authorization: <API key>` — send the raw key (no `Bearer`

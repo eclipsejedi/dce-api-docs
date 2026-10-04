@@ -43,10 +43,10 @@ Use staging for development and integration testing when your account includes a
 
 ## Getting started (short path)
 
-1. **Get access** — Obtain API credentials from your DCE contact. You need at least one API key and, if you use webhooks, a **webhook secret** and a publicly reachable **HTTPS** URL (ngrok or similar is fine for development).
+1. **Get access** — Your DCE contact invites you to the merchant dashboard. Under **Account → Integration** you generate your API key and, if you use webhooks, a **webhook signing secret**; each is shown once, so store it when it appears. Webhooks also need a publicly reachable **HTTPS** URL (ngrok or similar is fine for development).
 2. **Read authentication** — See [Authentication Setup](https://docs.dcepay.io/docs/authentication) and [Merchant Authentication Guide](https://docs.dcepay.io/docs/merchant-authentication-guide) for headers, scopes, and safe handling of keys.
 3. **Follow the quick start** — [Quick Start Guide](https://docs.dcepay.io/docs/quickstart) walks through environment setup, first requests, and common patterns.
-4. **Turn on webhooks** — Configure `webhookUrl`, `webhookSecret`, and `webhookEvents` on your merchant profile, then implement signature verification. Start with [Webhooks](https://docs.dcepay.io/docs/webhooks) (especially *How the system delivers webhooks*).
+4. **Turn on webhooks** — Save your `webhookUrl` and generate a signing secret in the dashboard, then implement signature verification. Start with [Webhooks](https://docs.dcepay.io/docs/webhooks) (especially *How the system delivers webhooks*).
 5. **Validate in staging** — Exercise deposits, withdrawals, and webhook delivery against staging before going live.
 
 When you are ready for detail, use the [API Reference](https://docs.dcepay.io/docs/api-reference) and the generated OpenAPI spec (see below) to see which routes are available to your integration.

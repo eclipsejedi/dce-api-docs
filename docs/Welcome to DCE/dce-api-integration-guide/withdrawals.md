@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-07-31_
+_Last updated: 2026-09-17_
 
 The withdrawals API allows you to process payouts to customers and external addresses. This guide covers withdrawal creation, status tracking, balance validation, and best practices for managing withdrawal flows.
 
@@ -26,7 +26,9 @@ Balances are segmented per `(currency, network)` pair. There is **no cross-chain
 |----------|---------|--------|
 | `USDT` | `TRX` (Tron) | **Available** |
 | `USDT` | `TRX_SHASTA` (Tron testnet) | Available (staging/testing) |
-| `USDT` / `USDC` | `ETH`, `BNB`, `SOL` | Coming soon / on request |
+| `USDT` / `USDC` | `BNB` (BNB Smart Chain) | Deposits live since 2026-09-08; withdrawals enabled after the first production deposits (see the [Changelog](https://docs.dcepay.io/docs/changelog)) |
+| `USDT` / `USDC` | `POL` (Polygon PoS) | Deposits live since 2026-09-09; withdrawals enabled after the first production deposits |
+| `USDT` / `USDC` | `ETH`, `SOL` | Coming soon / on request |
 
 Requests referencing a disabled `(currency, network)` pair are rejected with `400` and an error such as `"Withdrawals of USDT on ETH are not supported"`.
 
@@ -58,7 +60,7 @@ curl -X POST "https://api.dcepay.io/api/withdrawals" \
 |-----------|------|----------|-------------|
 | `amount` | string | Yes | Amount to withdraw as a positive decimal string (up to 18 decimal places), e.g. `"100.50"` |
 | `currency` | string | Yes | Token symbol: `USDT` or `USDC` |
-| `network` | string | Yes | Network symbol: `TRX`, `ETH`, `BNB`, `SOL` (testnets: `TRX_SHASTA`, `SEP`, `tBNB`, `SOL_DEVNET`). Currently only `TRX` is enabled for `USDT` |
+| `network` | string | Yes | Network symbol: `TRX`, `ETH`, `BNB`, `POL`, `SOL` (testnets: `TRX_SHASTA`, `SEP`, `tBNB`, `POL_AMOY`, `SOL_DEVNET`). Only pairs with withdrawals enabled are accepted — see *Supported currencies and networks* above |
 | `destination` | string | Yes | Destination address for the withdrawal |
 | `description` | string | No | Free-text description for the withdrawal |
 | `referenceId` | string | No | Your own reference for this withdrawal. **Unique per merchant** — reusing a `referenceId` never creates a second payout (see [Idempotency](#3-idempotency-with-referenceid)) |
@@ -77,20 +79,20 @@ curl -X POST "https://api.dcepay.io/api/withdrawals" \
   "destination": "TXYZa1b2c3d4e5f6g7h8i9j0k1l2m3n4o5",
   "feeInfo": {
     "grossAmount": "100.5",
-    "netAmount": "98.5",
-    "totalFees": "2",
+    "netAmount": "99.3",
+    "totalFees": "1.2",
     "feeBreakdown": {
-      "baseFee": "1",
-      "markupRate": "0",
-      "markupAmount": "1",
-      "networkFee": "1",
-      "totalFee": "2"
+      "baseFee": "0",
+      "markupRate": "0.001",
+      "markupAmount": "0",
+      "networkFee": "1.2",
+      "totalFee": "1.2"
     }
   }
 }
 ```
 
-> **Important:** fees are charged **on top of** the withdrawal amount. The destination address receives the full `amount`; your balance is debited `amount + commission + networkFee`. Make sure your available balance covers the total, not just the amount.
+> **Important:** fees are charged **on top of** the withdrawal amount. The destination address receives the full `amount`; your balance is debited `amount + max(commission, networkFee)`. Make sure your available balance covers the total, not just the amount.
 
 #### JavaScript Example
 
@@ -201,8 +203,8 @@ Balances are returned per `(currency, network)` pair, together with the current 
       "available": "250.75",
       "pending": "10",
       "withdrawalEnabled": true,
-      "networkFee": "1",
-      "maxWithdrawable": "249.75",
+      "networkFee": "1.2",
+      "maxWithdrawable": "249.55",
       "lastUpdatedAt": "2026-07-19T10:30:00Z"
     }
   ]
@@ -228,7 +230,7 @@ async function validateWithdrawalBalance(currency, network, amount) {
     throw new Error(`No ${currency} balance on ${network}`);
   }
 
-  // Remember: total debit = amount + commission + networkFee
+  // Remember: total debit = amount + max(commission, networkFee)
   if (parseFloat(balance.maxWithdrawable) < parseFloat(amount)) {
     throw new Error(`Insufficient balance on ${network}. Max withdrawable: ${balance.maxWithdrawable} ${currency}`);
   }
@@ -255,18 +257,21 @@ PENDING → CONFIRMED (when the payout is submitted and confirmed on-chain)
 PENDING → FAILED (if payout initiation or on-chain processing fails)
 ```
 
-When a withdrawal fails, the full reserved amount (`amount + commission + networkFee`) is released back to your available balance, and your `referenceId` is freed for reuse on a retry.
+When a withdrawal fails, the full reserved amount (`amount` plus all fees) is released back to your available balance, and your `referenceId` is freed for reuse on a retry.
 
 ## Fee Structure
 
 Withdrawal fees are charged **on top of** the withdrawal amount. Every withdrawal is debited:
 
 ```
-total debit = amount + commission + networkFee
+total debit = amount + max(commission, networkFee)
 ```
 
-- **Commission** — your merchant withdrawal fee. Either a percentage of the amount (if a percentage rate is configured for your account) or a flat per-network fee in token units. Minimum commission: 0.10 USDT.
-- **Network fee** — a per-`(currency, network)` fee quoted at submission time from the platform's asset matrix. The fee quoted at submission is what you pay, even if the finalized on-chain cost differs.
+- **Commission** — your merchant withdrawal fee: **0.1% of the amount** for all merchants since 2026-09-03 (a flat per-network fee in token units for accounts configured that way).
+- **Network fee** — a per-`(currency, network)` fee quoted at submission time. On TRX: **1.20 USDT** standard, or **2.50 USDT** when the destination address holds no USDT at submission (such transfers cost about twice the network resources; if the destination balance cannot be read, the higher tier is quoted). The fee quoted at submission is what you pay, even if the finalized on-chain cost differs.
+- The network fee is a **floor** under the commission (since 2026-09-01), not an add-on: the reported `commission` is only the margin above the network fee, and is `0` whenever `amount × 0.1%` is below it (amounts under 1,200 USDT at the standard tier).
+
+Effective 2026-09-03 00:00 GMT+8. Before that: 1.00 USDT network fee, flat commissions stacked on top until 2026-09-01.
 
 ### Per-network flat fees
 
@@ -277,6 +282,7 @@ Default flat commission per network (token units) — your account may have cust
 | `TRX` | 1 |
 | `ETH` | 2 |
 | `BNB` | 0.2 |
+| `POL` | 0.2 |
 | `SOL` | 0.2 |
 
 Testnets mirror their mainnet fee.
@@ -284,13 +290,16 @@ Testnets mirror their mainnet fee.
 ### Fee Calculation
 
 ```javascript
-// For a 100 USDT withdrawal on TRX with a 1 USDT flat commission
-// and a 1 USDT network fee:
+// For a 100 USDT withdrawal on TRX at the 0.1% rate, standard tier:
 const amount = 100;
-const commission = 1;   // flat per-network fee (or amount × rate if percentage)
-const networkFee = 1;   // quoted from the asset matrix at submission
-const totalDebit = amount + commission + networkFee; // 102 USDT debited
+const commission = amount * 0.001;   // 0.10
+const networkFee = 1.2;              // 2.5 if the destination holds no USDT
+const totalFee = Math.max(commission, networkFee); // 1.20
+const totalDebit = amount + totalFee;              // 101.20 USDT debited
 // Destination receives the full 100 USDT
+
+// For 5,000 USDT: commission 5.00 > networkFee 1.20 → totalFee 5.00,
+// reported as commission 3.80 (margin) + networkFee 1.20.
 ```
 
 ### System Configuration
@@ -302,7 +311,7 @@ Withdrawal fees are configured internally by system administrators and cannot be
 3. **Merchant legacy flat fee** — single flat fee if no per-network fee is set
 4. **System defaults** — system percentage or system base fee
 
-A minimum commission of 0.10 USDT applies in all cases (unless withdrawal fees are disabled system-wide).
+The resolved commission is then floored by the network fee as described above. A minimum commission of 0.10 USDT applies inside the resolver (unless withdrawal fees are disabled system-wide), but in practice the network fee is the binding floor.
 
 #### Admin API for Fee Management
 
@@ -335,14 +344,14 @@ The withdrawal API response includes detailed fee information in `feeInfo`:
 {
   "feeInfo": {
     "grossAmount": "100",
-    "netAmount": "98",
-    "totalFees": "2",
+    "netAmount": "98.8",
+    "totalFees": "1.2",
     "feeBreakdown": {
-      "baseFee": "1",
-      "markupRate": "0",
-      "markupAmount": "1",
-      "networkFee": "1",
-      "totalFee": "2"
+      "baseFee": "0",
+      "markupRate": "0.001",
+      "markupAmount": "0",
+      "networkFee": "1.2",
+      "totalFee": "1.2"
     }
   }
 }
@@ -350,10 +359,10 @@ The withdrawal API response includes detailed fee information in `feeInfo`:
 
 | Field | Description |
 |-------|-------------|
-| `feeBreakdown.baseFee` / `markupAmount` | The commission charged for this withdrawal |
+| `feeBreakdown.baseFee` / `markupAmount` | The commission margin above the network fee (`0` when your commission does not exceed it) |
 | `feeBreakdown.markupRate` | The percentage rate applied (`0` when the commission is flat) |
-| `feeBreakdown.networkFee` | The per-network fee quoted at submission |
-| `feeBreakdown.totalFee` / `totalFees` | `commission + networkFee` — charged on top of `amount` |
+| `feeBreakdown.networkFee` | The per-network fee quoted at submission (standard or fresh-destination tier) |
+| `feeBreakdown.totalFee` / `totalFees` | `max(commission, networkFee)` = `baseFee + networkFee` — charged on top of `amount` |
 
 ## Reseller Payouts
 
@@ -384,17 +393,18 @@ The `referenceId` (and `identifier`) in callback payloads is **your own merchant
   "address": "TXYZa1b2c3d4e5f6g7h8i9j0k1l2m3n4o5",
   "identifier": "order_123",
   "feeCharges": {
-    "amount": "1",
-    "percentage": "0",
-    "type": "FIXED_AMOUNT",
-    "networkFee": "1"
+    "amount": "0",
+    "percentage": "0.001",
+    "type": "NONE",
+    "networkFee": "1.2"
   },
-  "receivableAmount": "99.5",
+  "receivableAmount": "100.5",
+  "confirmedAt": "2026-09-03T10:15:22+08:00",
   "eventId": "cmdl8u2xq0002abcd1234efgh"
 }
 ```
 
-`feeCharges` is always present — `amount` is `"0"` with `type: "NONE"` when no commission is charged; `networkFee` is the per-chain fee charged on top of the withdrawal amount.
+`feeCharges` is always present — `amount` is the commission margin above the network fee (`"0"` with `type: "NONE"` when your commission does not exceed it); `networkFee` is the per-chain fee quoted at submission. `confirmedAt` is in GMT+8 (`+08:00`).
 
 ### Withdrawal Failed Webhook
 

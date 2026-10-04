@@ -4,9 +4,10 @@ excerpt: >-
   Allocates a chain deposit address for an end-user.
 
 
-  **Body (JSON):** `network` — one of `TRX`, `ETH`, `BNB`, `SOL` (testnets:
-  `TRX_SHASTA`, `SEP`, `tBNB`, `SOL_DEVNET`); `identifier` (required);
-  `referenceId` (optional). Currently only `TRX` deposits are enabled.
+  **Body (JSON):** `network` — one of `TRX`, `ETH`, `BNB`, `POL`, `SOL`
+  (testnets: `TRX_SHASTA`, `SEP`, `tBNB`, `POL_AMOY`, `SOL_DEVNET`);
+  `identifier` (required); `referenceId` (optional). Deposits are enabled per
+  (currency, network) pair — see the Fees reference.
 
 
   If the user is linked to a merchant profile, that profile must be **ACTIVE**

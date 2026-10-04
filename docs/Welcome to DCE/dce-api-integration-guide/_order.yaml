@@ -8,6 +8,8 @@
 - balance-management
 - transactions
 - exchange-rates
+- aml-checks
+- compliance-checks
 - webhooks
 - api-reference
 - fees-reference

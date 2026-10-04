@@ -5,11 +5,11 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-07-30_
+_Last updated: 2026-09-17_
 
 The balance API exposes **per-(currency, network)** available and pending balances for the authenticated user. Balances are segmented by chain: a USDT balance on TRX is separate from a USDT balance on ETH, and funds deposited on one chain can only be withdrawn on that same chain — there is no cross-chain fungibility.
 
-> **Availability:** USDT on TRX (and its `TRX_SHASTA` testnet twin) is the pair enabled today. Other pairs (USDT/USDC on ETH, BNB, SOL) are coming soon / available on request.
+> **Availability:** USDT on TRX (and its `TRX_SHASTA` testnet twin) is enabled for deposits and withdrawals. USDT/USDC on BNB (since 2026-09-08) and on POL (since 2026-09-09) are enabled for deposits; their rows report `withdrawalEnabled: false` until withdrawals open on each network. Other pairs (ETH, SOL) are coming soon / available on request.
 
 ## Endpoint
 
@@ -20,7 +20,7 @@ The balance API exposes **per-(currency, network)** available and pending balanc
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | `currency` | No | Token symbol: `USDT` or `USDC`. |
-| `network` | No | Network symbol: `TRX`, `ETH`, `BNB`, `SOL` (testnets: `TRX_SHASTA`, `SEP`, `tBNB`, `SOL_DEVNET`). |
+| `network` | No | Network symbol: `TRX`, `ETH`, `BNB`, `POL`, `SOL` (testnets: `TRX_SHASTA`, `SEP`, `tBNB`, `POL_AMOY`, `SOL_DEVNET`). |
 
 **Authentication:** send your API key in `Authorization` (raw key or `Bearer <key>`).
 

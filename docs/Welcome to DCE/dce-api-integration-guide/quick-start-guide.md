@@ -11,7 +11,7 @@ This guide gets you from credentials to a working DCE API integration quickly.
 
 ## Prerequisites
 
-- DCE API credentials (API key, and webhook secret if using webhooks)
+- Access to the DCE merchant dashboard — you generate your own API key and, if you use webhooks, your signing secret under **Account → Integration**
 - A backend service where secrets can be stored securely
 - HTTPS endpoint for webhook testing (ngrok is fine for local dev)
 - Basic familiarity with JSON + HTTP APIs
@@ -106,7 +106,7 @@ curl -sS -X POST "${DCE_BASE_URL}/api/withdrawals" \
 
 ## 7) Enable webhooks
 
-Configure your merchant webhook settings (`webhookUrl`, `webhookSecret`, `webhookEnabled`, optional `webhookEvents`).
+In the dashboard (**Account → Integration → Webhook**) save your `webhookUrl`, then press **Generate signing secret** and copy the `whsec_…` value — it is shown once.
 
 DCE sends outbound POSTs with:
 - `Content-Type: application/json`

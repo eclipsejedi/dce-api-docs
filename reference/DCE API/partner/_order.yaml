@@ -9,3 +9,9 @@
 - get_api_transactions
 - post_api_withdrawals
 - get_api_withdrawals
+- post_api_aml_checks
+- get_api_aml_checks
+- get_api_aml_checks__checkId
+- post_api_compliance_checks
+- get_api_compliance_checks
+- get_api_compliance_checks__checkId
