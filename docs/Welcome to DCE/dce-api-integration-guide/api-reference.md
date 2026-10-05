@@ -826,7 +826,7 @@ List user settlements with pagination and filtering.
 **Query Parameters:**
 - `page` (optional): Page number (default: 1)
 - `limit` (optional): Items per page (default: 20, max: 100)
-- `status` (optional): Settlement status (PENDING, APPROVAL_REQUIRED, APPROVED, PROCESSING, SUBMITTED_TO_AKASHIC, COMPLETED, FAILED, CANCELLED, REJECTED)
+- `status` (optional): Settlement status (PENDING, APPROVAL_REQUIRED, APPROVED, PROCESSING, SUBMITTED, COMPLETED, FAILED, CANCELLED, REJECTED). `SUBMITTED` means the on-chain payout has been sent and is awaiting confirmation; the former spelling of that value is still accepted as a filter
 
 **Response:**
 ```json
