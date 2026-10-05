@@ -842,6 +842,8 @@ List user settlements with pagination and filtering.
       "destinationNetwork": "TRX",
       "createdAt": "2026-07-19T10:30:00Z",
       "totalFees": "31.00",
+      "payoutReference": "cmg7w2k9x0003",
+      "submittedAt": null,
       "merchantAddress": {
         "address": "TSettlementAddress...",
         "label": "Treasury wallet"
@@ -856,6 +858,8 @@ List user settlements with pagination and filtering.
   }
 }
 ```
+
+`payoutReference` identifies the settlement's payout request (set when the settlement is created). `submittedAt` is when the payout was sent on-chain (`status` `SUBMITTED`), and `null` until then.
 
 **Example Request:**
 ```javascript
