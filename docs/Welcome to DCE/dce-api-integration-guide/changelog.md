@@ -7,9 +7,9 @@ metadata:
 ---
 _Last updated: 2026-10-16_
 
-Dated record of merchant-visible API and platform changes. The API reference header always shows the date of the most recent API change; entries here explain what changed. Dates are UTC.
+Dated record of merchant-visible API and platform changes. The API reference header always shows the current docs version and the date of the most recent API change; entries here explain what changed. Each published update raises the docs version (1.1, 1.2, …) and is tagged with it below; entries before v1.1 belong to version 1.0. Dates are UTC.
 
-## 2026-10-16
+## 2026-10-16 — v1.1
 
 - **TRON testnet is now Nile: network `TRX_NILE`.** Sandbox TRON deposit addresses, deposit URLs, withdrawals and settlements run on the TRON Nile testnet under the new network symbol `TRX_NILE`. Fund sandbox addresses with Nile test USDT (contract `TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf`); transactions show on [nile.tronscan.org](https://nile.tronscan.org). The previous testnet symbol `TRX_SHASTA` is still accepted anywhere a `network` is sent (request bodies and `?network=` filters) and is treated as `TRX_NILE`; responses and callbacks return `TRX_NILE`. Testnet fees mirror mainnet TRX. No change on mainnet `TRX`. See [Deposits](https://docs.dcepay.io/docs/deposits).
 - **`POST /api/deposit-url` no longer times out on address creation.** Creating a new deposit address could hang until the gateway returned an HTML `504`. Address creation now gives up within 20 seconds with a JSON `500` (`Failed to create deposit address`) that is safe to retry.
