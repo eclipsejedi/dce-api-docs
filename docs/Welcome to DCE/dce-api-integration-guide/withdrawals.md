@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-09-17_
+_Last updated: 2026-10-16_
 
 The withdrawals API allows you to process payouts to customers and external addresses. This guide covers withdrawal creation, status tracking, balance validation, and best practices for managing withdrawal flows.
 
@@ -25,7 +25,7 @@ Balances are segmented per `(currency, network)` pair. There is **no cross-chain
 | Currency | Network | Status |
 |----------|---------|--------|
 | `USDT` | `TRX` (Tron) | **Available** |
-| `USDT` | `TRX_SHASTA` (Tron testnet) | Available (staging/testing) |
+| `USDT` | `TRX_NILE` (Tron Nile testnet) | Available (staging/testing) |
 | `USDT` / `USDC` | `BNB` (BNB Smart Chain) | Deposits live since 2026-09-08; withdrawals enabled after the first production deposits (see the [Changelog](https://docs.dcepay.io/docs/changelog)) |
 | `USDT` / `USDC` | `POL` (Polygon PoS) | Deposits live since 2026-09-09; withdrawals enabled after the first production deposits |
 | `USDT` / `USDC` | `ETH`, `SOL` | Coming soon / on request |
@@ -60,7 +60,7 @@ curl -X POST "https://api.dcepay.io/api/withdrawals" \
 |-----------|------|----------|-------------|
 | `amount` | string | Yes | Amount to withdraw as a positive decimal string (up to 18 decimal places), e.g. `"100.50"` |
 | `currency` | string | Yes | Token symbol: `USDT` or `USDC` |
-| `network` | string | Yes | Network symbol: `TRX`, `ETH`, `BNB`, `POL`, `SOL` (testnets: `TRX_SHASTA`, `SEP`, `tBNB`, `POL_AMOY`, `SOL_DEVNET`). Only pairs with withdrawals enabled are accepted — see *Supported currencies and networks* above |
+| `network` | string | Yes | Network symbol: `TRX`, `ETH`, `BNB`, `POL`, `SOL` (testnets: `TRX_NILE`, `SEP`, `tBNB`, `POL_AMOY`, `SOL_DEVNET`). Only pairs with withdrawals enabled are accepted — see *Supported currencies and networks* above |
 | `destination` | string | Yes | Destination address for the withdrawal |
 | `description` | string | No | Free-text description for the withdrawal |
 | `referenceId` | string | No | Your own reference for this withdrawal. **Unique per merchant** — reusing a `referenceId` never creates a second payout (see [Idempotency](#3-idempotency-with-referenceid)) |

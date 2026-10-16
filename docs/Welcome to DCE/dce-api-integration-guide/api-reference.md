@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-10-05_
+_Last updated: 2026-10-16_
 
 This document provides a comprehensive reference for DCE API HTTP endpoints. Unless otherwise noted, routes require API key authentication.
 
@@ -40,9 +40,9 @@ The hosted deposit browser flow uses `GET /api/deposit-page?token=...` and `GET 
 Balances and money movement are segmented per **(currency, network)** pair:
 
 - `currency`: `USDT`, `USDC`
-- `network`: `TRX`, `ETH`, `BNB`, `POL`, `SOL` (testnets: `TRX_SHASTA`, `SEP`, `tBNB`, `POL_AMOY`, `SOL_DEVNET`)
+- `network`: `TRX`, `ETH`, `BNB`, `POL`, `SOL` (testnets: `TRX_NILE`, `SEP`, `tBNB`, `POL_AMOY`, `SOL_DEVNET`)
 
-**Currently enabled for deposits and withdrawals: USDT on TRX** (and its `TRX_SHASTA` testnet twin). The other pairs (USDT/USDC on ETH, BNB, SOL) exist in the capability matrix but are disabled until verified — they are coming soon and can be enabled on request without an integration change on your side.
+**Currently enabled for deposits and withdrawals: USDT on TRX** (and its `TRX_NILE` Nile testnet twin). The other pairs (USDT/USDC on ETH, BNB, SOL) exist in the capability matrix but are disabled until verified — they are coming soon and can be enabled on request without an integration change on your side.
 
 Key consequences:
 
@@ -64,6 +64,9 @@ Key consequences:
   }
 }
 ```
+
+### Request IDs
+Responses from the authenticated API endpoints carry an `X-Request-Id` header. If you send an `X-Correlation-Id` header made of letters, digits, `.`, `_` or `-` (up to 128 characters), that value is used and echoed back; otherwise the API generates one. The same id is also returned as `X-Correlation-Id`. Log it with your request and quote it when contacting support — it identifies the exact request in our logs.
 
 ### Error Response
 ```json
@@ -148,12 +151,14 @@ const balance = await response.json();
 List user transactions with pagination and filtering.
 
 **Query Parameters:**
-- `page` (optional): Page number (default: 1)
-- `limit` (optional): Items per page (default: 20)
+- `page` (optional): Page number, a positive integer (default: 1)
+- `limit` (optional): Items per page, a positive integer (default: 20)
 - `type` (optional): Transaction type (DEPOSIT, WITHDRAWAL)
 - `status` (optional): Transaction status (PENDING, CONFIRMED, FAILED, CANCELLED)
 - `currency` (optional): Token symbol (`USDT`, `USDC`)
 - `network` (optional): Network symbol (`TRX`, `ETH`, `BNB`, `SOL`, or a testnet symbol)
+
+Every parameter may be omitted, and an empty value (`?status=`) is treated as omitted. A non-numeric or non-positive `page`/`limit` returns `400`.
 
 **Response:**
 ```json
@@ -224,7 +229,7 @@ List user deposits with pagination and filtering.
 **Query Parameters:**
 - `page` (optional): Page number (default: 1)
 - `limit` (optional): Items per page (default: 10)
-- `status` (optional): Deposit status (PENDING, CONFIRMED, FAILED, CANCELLED)
+- `status` (optional): Deposit status (PENDING, CONFIRMED, FAILED, CANCELLED). Any other value returns `400` with the allowed values.
 
 **Response:**
 ```json
@@ -384,7 +389,7 @@ List user withdrawals with pagination and filtering.
 **Query Parameters:**
 - `page` (optional): Page number (default: 1)
 - `limit` (optional): Items per page (default: 10, max: 100)
-- `status` (optional): Withdrawal status (PENDING, CONFIRMED, FAILED, CANCELLED)
+- `status` (optional): Withdrawal status (PENDING, CONFIRMED, FAILED, CANCELLED). Any other value returns `400` with the allowed values.
 
 **Response:**
 ```json
@@ -1079,7 +1084,7 @@ Merchant API keys cannot call these; they are documented here only so the route 
 |-------------|-------------|---------------|
 | `200` | OK - Request successful | - |
 | `201` | Created - Resource created successfully | - |
-| `400` | Bad Request - Invalid request data | Missing required fields, invalid format, disabled (currency, network) pair, insufficient per-chain balance |
+| `400` | Bad Request - Invalid request data | Missing required fields, invalid format or unknown filter value (e.g. `status`), disabled (currency, network) pair, insufficient per-chain balance |
 | `401` | Unauthorized - Authentication required | Missing or invalid API key |
 | `403` | Forbidden - Insufficient permissions | Key lacks required permissions, or merchant account is not active |
 | `404` | Not Found - Resource not found | Invalid ID, resource doesn't exist |

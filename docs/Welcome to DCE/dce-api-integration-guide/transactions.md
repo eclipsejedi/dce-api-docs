@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-07-30_
+_Last updated: 2026-10-16_
 
 The transactions API allows you to retrieve transaction history across all payment types. This guide covers transaction listing, filtering, pagination, and status tracking for deposits and withdrawals.
 
@@ -43,7 +43,7 @@ curl -X GET "https://api.dcepay.io/api/transactions?page=1&limit=20&type=DEPOSIT
 | `type` | string | No | Transaction type filter (`DEPOSIT`, `WITHDRAWAL`) |
 | `status` | string | No | Status filter (`PENDING`, `CONFIRMED`, `FAILED`, `CANCELLED`) |
 | `currency` | string | No | Token symbol filter (`USDT`, `USDC`) |
-| `network` | string | No | Network filter (`TRX`, `ETH`, `BNB`, `SOL`; testnets `TRX_SHASTA`, `SEP`, `tBNB`, `SOL_DEVNET`) |
+| `network` | string | No | Network filter (`TRX`, `ETH`, `BNB`, `SOL`; testnets `TRX_NILE`, `SEP`, `tBNB`, `SOL_DEVNET`) |
 
 Unrecognized filter values are ignored (the filter is simply not applied) rather than rejected.
 

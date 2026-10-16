@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-09-17_
+_Last updated: 2026-10-16_
 
 The deposits API allows you to accept customer payments by creating deposit addresses and tracking payment status. This guide covers all aspects of deposit management including address creation, URL generation, payment tracking, and how deposits are credited and charged.
 
@@ -19,9 +19,11 @@ The deposit flow consists of three main steps:
 
 ### Supported currencies and networks
 
-Deposits are stablecoin-only: `USDT` and `USDC`, segmented per network (`TRX`, `ETH`, `BNB`, `POL`, `SOL`; testnets `TRX_SHASTA`, `SEP`, `tBNB`, `POL_AMOY`, `SOL_DEVNET`). Balances are tracked **per (currency, network) pair** — funds deposited on one chain can only be withdrawn on that same chain.
+Deposits are stablecoin-only: `USDT` and `USDC`, segmented per network (`TRX`, `ETH`, `BNB`, `POL`, `SOL`; testnets `TRX_NILE`, `SEP`, `tBNB`, `POL_AMOY`, `SOL_DEVNET`). Balances are tracked **per (currency, network) pair** — funds deposited on one chain can only be withdrawn on that same chain.
 
-> **Availability:** USDT on TRX (and its `TRX_SHASTA` testnet twin), USDT/USDC on BNB (since 2026-09-08) and USDT/USDC on POL (since 2026-09-09) are enabled for deposits today; ETH follows next, one network at a time. Requests for a network with no enabled pair are rejected with `400` and the message `Deposits on {network} are not currently supported`.
+> **TRON testnet is Nile (`TRX_NILE`).** Sandbox TRON addresses live on the [Nile testnet](https://nileex.io); fund them with Nile test USDT (contract `TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf`, from the Nile faucet). The former testnet symbol `TRX_SHASTA` is still accepted in requests and treated as `TRX_NILE`; responses always return `TRX_NILE`.
+
+> **Availability:** USDT on TRX (and its `TRX_NILE` Nile testnet twin), USDT/USDC on BNB (since 2026-09-08) and USDT/USDC on POL (since 2026-09-09) are enabled for deposits today; ETH follows next, one network at a time. Requests for a network with no enabled pair are rejected with `400` and the message `Deposits on {network} are not currently supported`.
 >
 > **EVM networks share one deposit address per client.** The address issued for an `identifier` on `BNB` is the same address on `POL` (and on `ETH` once live); asking for it on a sibling EVM network returns the identical address. Funds are credited per `(currency, network)` — state the network to your customer — but a payment sent on the wrong EVM network is recoverable by support because the platform holds the key on every EVM network.
 
@@ -48,7 +50,7 @@ curl -X POST "${DCE_BASE_URL}/api/deposit-address" \
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `network` | string | Yes | One of `TRX`, `ETH`, `BNB`, `POL`, `SOL`, `TRX_SHASTA`, `SEP`, `tBNB`, `POL_AMOY`, `SOL_DEVNET` (`NetworkSymbol`). Only networks with an enabled (currency, network) pair are accepted — TRX, BNB and POL today. |
+| `network` | string | Yes | One of `TRX`, `ETH`, `BNB`, `POL`, `SOL`, `TRX_NILE`, `SEP`, `tBNB`, `POL_AMOY`, `SOL_DEVNET` (`NetworkSymbol`). Only networks with an enabled (currency, network) pair are accepted — TRX, BNB and POL today. |
 | `identifier` | string | Yes | Your end-user or customer identifier |
 | `referenceId` | string | No | Optional business reference (order id, invoice id, etc.) |
 

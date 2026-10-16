@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-05-05_
+_Last updated: 2026-10-16_
 
 Comprehensive testing guide for the dce API integration. This guide covers testing strategies, tools, and best practices to ensure your integration works correctly in both development and production environments.
 
@@ -41,6 +41,19 @@ The test environment provides:
 - **Test Transactions** - Mock transaction data
 - **Test Webhooks** - Webhook simulation tools
 - **Test Addresses** - Valid cryptocurrency addresses for testing
+
+### TRON sandbox (Nile)
+
+Staging (`https://api.dcepay.dev`) runs TRON on the **Nile testnet**, network symbol **`TRX_NILE`**. Deposits and withdrawals there move real testnet tokens, so an end-to-end test looks like production:
+
+1. Create a deposit address or deposit URL with `"network": "TRX_NILE"` (`POST /api/deposit-address` or `POST /api/deposit-url`).
+2. Get Nile test USDT (contract `TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf`, 6 decimals) and test TRX from the [Nile faucet](https://nileex.io/join/getJoinPage), then send USDT to the address from a Nile wallet (e.g. TronLink switched to Nile).
+3. The deposit is credited once it is verified on-chain and your `deposit.confirmed` callback fires with `"network": "TRX_NILE"`. Track the transfer on [nile.tronscan.org](https://nile.tronscan.org).
+4. Withdraw with `"network": "TRX_NILE"` to any Nile address; the fee schedule mirrors mainnet `TRX`.
+
+Notes:
+- `TRX_SHASTA`, the previous testnet symbol, is still accepted in requests and treated as `TRX_NILE`; responses and callbacks always return `TRX_NILE`.
+- Testnet balances are separate from production and have no monetary value. Never send mainnet funds to a sandbox address.
 
 ## Unit Testing
 

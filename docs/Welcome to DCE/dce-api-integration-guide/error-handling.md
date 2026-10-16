@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-07-30_
+_Last updated: 2026-10-16_
 
 DCE API errors use standard HTTP status codes and JSON bodies. This guide explains what to expect and how to handle failures safely.
 
@@ -68,7 +68,7 @@ This is not retryable — contact support (or your reseller) to reactivate the a
 
 ### 400 — Disabled or unknown (currency, network) pair
 
-Balances and payments are per-`(currency, network)` pair, and each pair must be enabled for the requested direction. Currently only **USDT on TRX** (and its Shasta testnet) is enabled; other pairs are coming soon / on request. Requests referencing a disabled pair are rejected:
+Balances and payments are per-`(currency, network)` pair, and each pair must be enabled for the requested direction. Currently only **USDT on TRX** (and its Nile testnet, `TRX_NILE`) is enabled; other pairs are coming soon / on request. Requests referencing a disabled pair are rejected:
 
 ```json
 {
@@ -195,6 +195,6 @@ Reach out with:
 - environment (`staging` or `production`)
 - endpoint + approximate timestamp (UTC)
 - status code + response body snippet
-- correlation/request ID if available
+- the `X-Request-Id` response header (your own `X-Correlation-Id` if you sent a plain token — letters, digits, `.`, `_`, `-`, up to 128 characters)
 
 Contact: [hello@dcepay.io](mailto:hello@dcepay.io)

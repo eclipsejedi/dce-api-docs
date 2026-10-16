@@ -6,7 +6,7 @@ excerpt: >-
 
 
   **Query (both optional):** `currency` — `USDT` | `USDC`; `network` — `TRX`,
-  `ETH`, `BNB`, `POL`, `SOL` (testnets: `TRX_SHASTA`, `SEP`, `tBNB`, `POL_AMOY`,
+  `ETH`, `BNB`, `POL`, `SOL` (testnets: `TRX_NILE`, `SEP`, `tBNB`, `POL_AMOY`,
   `SOL_DEVNET`).
 
 

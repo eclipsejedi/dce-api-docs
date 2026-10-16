@@ -5,9 +5,14 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-10-05_
+_Last updated: 2026-10-16_
 
 Dated record of merchant-visible API and platform changes. The API reference header always shows the date of the most recent API change; entries here explain what changed. Dates are UTC.
+
+## 2026-10-16
+
+- **TRON testnet is now Nile: network `TRX_NILE`.** Sandbox TRON deposit addresses, deposit URLs, withdrawals and settlements run on the TRON Nile testnet under the new network symbol `TRX_NILE`. Fund sandbox addresses with Nile test USDT (contract `TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf`); transactions show on [nile.tronscan.org](https://nile.tronscan.org). The previous testnet symbol `TRX_SHASTA` is still accepted anywhere a `network` is sent (request bodies and `?network=` filters) and is treated as `TRX_NILE`; responses and callbacks return `TRX_NILE`. Testnet fees mirror mainnet TRX. No change on mainnet `TRX`. See [Deposits](https://docs.dcepay.io/docs/deposits).
+- **`POST /api/deposit-url` no longer times out on address creation.** Creating a new deposit address could hang until the gateway returned an HTML `504`. Address creation now gives up within 20 seconds with a JSON `500` (`Failed to create deposit address`) that is safe to retry.
 
 ## 2026-10-05
 
@@ -17,6 +22,9 @@ Dated record of merchant-visible API and platform changes. The API reference hea
 - **`GET /api/settlements` fixed.** The endpoint returned `400` unless every query parameter was supplied. All parameters are optional again, as documented, and `isResellerSettlement=true|false` filters correctly.
 - **Exchange Rates guide corrected.** The guide now matches what `GET /api/exchange-rates` returns: `{ baseCurrency, rates, timestamp }`, where each `rates` value is the price of 1 USDT in `requestedCurrency` (repeated per network key), refreshed at most every 60 seconds, for 19 supported fiat currencies. Earlier versions of the guide described `targetCurrencies` / `includeHistorical` parameters, a `metadata` block and a `/api/exchange-rates/history` endpoint that the API does not provide. No API change. See [Exchange Rates](https://docs.dcepay.io/docs/exchange-rates).
 - **AML checks: stricter result handling.** `riskLevel` is now always `low`, `medium`, `high` or `null`, with a level derived from `riskScore` when the provider sends an unrecognised value. Scores outside 0–10 are dropped. `isSanctioned` falls back to the `sanctions` block when the provider omits it. A check the provider completed and billed without returning risk data is now `COMPLETED` and charged, with all risk fields `null` and an explanatory `error`. See [AML Address Checks](https://docs.dcepay.io/docs/aml-checks#response).
+- **`GET /api/transactions` no longer requires every query parameter.** Omitting any of `page`, `limit`, `type`, `status`, `currency` or `network` returned `400` ("expected string, received null"). All are optional again, as documented, and an empty value (`?status=`) is treated as omitted. A non-numeric `page`/`limit` now returns `400` instead of `500`. See [API Reference — Transactions](https://docs.dcepay.io/docs/api-reference#transactions).
+- **Invalid filters return `400` instead of `500`.** An unknown `status` on `GET /api/deposits` or `GET /api/withdrawals`, or an unknown `currency`/`network` on `GET /api/balance`, now returns `400` with the allowed values rather than an internal error.
+- **`X-Request-Id` response header.** Responses from the authenticated API endpoints now carry an `X-Request-Id` header — your `X-Correlation-Id` echoed back if you sent one (letters, digits, `.`, `_`, `-`, up to 128 characters), otherwise a generated id. Previously a supplied `X-Correlation-Id` was always replaced. Quote it when contacting support. See [Error Handling](https://docs.dcepay.io/docs/error-handling).
 
 ## 2026-10-04
 

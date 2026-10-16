@@ -5,11 +5,11 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-10-05_
+_Last updated: 2026-10-16_
 
 This page documents how fees are represented and calculated for merchant integrations.
 
-All fees are charged in-kind, in the currency and on the network of the underlying transaction (for example a USDT-TRX deposit is charged in USDT on TRX). Balances and fees are segmented per `(currency, network)` pair; today **USDT on TRX** (and its Shasta testnet twin) is enabled for deposits and withdrawals. **USDT and USDC on BSC (BNB Smart Chain)** are enabled for deposits since 2026-09-08 and **USDT and USDC on Polygon (POL)** since 2026-09-09; withdrawals on both EVM networks are enabled once the first production deposits have been observed (see the Changelog). The BSC / Polygon schedule below applies. Other pairs (ETH, SOL) follow later, one network at a time.
+All fees are charged in-kind, in the currency and on the network of the underlying transaction (for example a USDT-TRX deposit is charged in USDT on TRX). Balances and fees are segmented per `(currency, network)` pair; today **USDT on TRX** (and its Nile testnet twin, `TRX_NILE`) is enabled for deposits and withdrawals. **USDT and USDC on BSC (BNB Smart Chain)** are enabled for deposits since 2026-09-08 and **USDT and USDC on Polygon (POL)** since 2026-09-09; withdrawals on both EVM networks are enabled once the first production deposits have been observed (see the Changelog). The BSC / Polygon schedule below applies. Other pairs (ETH, SOL) follow later, one network at a time.
 
 ## Current fee schedule (USDT on TRX)
 

@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-07-30_
+_Last updated: 2026-10-16_
 
 This guide gets you from credentials to a working DCE API integration quickly.
 
@@ -25,7 +25,9 @@ This guide gets you from credentials to a working DCE API integration quickly.
 
 All endpoints are under `/api`.
 
-**Supported assets:** balances and money movement are per (currency, network) pair. **USDT on TRX** is what is available today (use `TRX_SHASTA` on staging); USDT/USDC on ETH, BNB, and SOL are coming soon and can be enabled on request.
+**Supported assets:** balances and money movement are per (currency, network) pair. **USDT on TRX** is what is available today (use `TRX_NILE` on staging); USDT/USDC on ETH, BNB, and SOL are coming soon and can be enabled on request.
+
+> **Staging uses testnets.** The examples below use `network=TRX` (production). On `https://api.dcepay.dev` send **`TRX_NILE`** instead — the TRON Nile testnet. Fund sandbox deposit addresses with Nile test USDT (contract `TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf`) from the [Nile faucet](https://nileex.io/join/getJoinPage) and follow transactions on [nile.tronscan.org](https://nile.tronscan.org). The former testnet symbol `TRX_SHASTA` is still accepted and treated as `TRX_NILE`. See the [Testing Guide](https://docs.dcepay.io/docs/testing-guide#tron-sandbox-nile).
 
 ## 2) Configure environment variables
 

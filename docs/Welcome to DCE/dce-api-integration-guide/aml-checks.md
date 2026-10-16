@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-10-05_
+_Last updated: 2026-10-16_
 
 Screen any wallet address for anti-money-laundering (AML) risk before you accept funds from it or pay out to it. A check returns an **Elliptic** risk score, a risk level, sanctions exposure and the risk detail behind the score.
 
@@ -40,7 +40,7 @@ AML checks cover the networks live on DCE:
 | `POL` | Polygon PoS | **Available** |
 | `ETH` | Ethereum | Available once Ethereum goes live on DCE |
 
-Testnet networks (`TRX_SHASTA`, `tBNB`, `POL_AMOY`, `SEP`) cannot be screened. `GET /api/aml-checks` returns the networks you can screen right now in `service.supportedNetworks`.
+Testnet networks (`TRX_NILE`, `tBNB`, `POL_AMOY`, `SEP`) cannot be screened. `GET /api/aml-checks` returns the networks you can screen right now in `service.supportedNetworks`.
 
 ## Run a check
 

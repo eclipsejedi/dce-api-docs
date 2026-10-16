@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
   title: DCE API
-  version: 1.0 (updated 2026-10-05)
+  version: 1.0 (updated 2026-10-16)
   description: >-
-    **Last updated:** 2026-10-05 — see the
+    **Last updated:** 2026-10-16 — see the
     [Changelog](https://docs.dcepay.io/docs/changelog) for what changed.
 
 
@@ -20,7 +20,7 @@ info:
 
 
     **Networks** (request body `network` where applicable): `ETH`, `TRX`, `SEP`,
-    `TRX_SHASTA`, `BNB`, `tBNB`, `POL`, `POL_AMOY` (see Prisma `NetworkSymbol`).
+    `TRX_NILE`, `BNB`, `tBNB`, `POL`, `POL_AMOY` (see Prisma `NetworkSymbol`).
 
 
     **Amounts:** request and response monetary fields are often decimal
@@ -97,9 +97,8 @@ tags:
     description: Per-currency available and pending balances for the authenticated
       merchant user (`BalanceService`).
   - name: Deposits
-    description: "Deposit addresses (`NetworkSymbol`: ETH, TRX, SEP, TRX_SHASTA,
-      BNB, tBNB, POL, POL_AMOY), deposit URLs, and single-use deposit page
-      tokens."
+    description: "Deposit addresses (`NetworkSymbol`: ETH, TRX, SEP, TRX_NILE, BNB,
+      tBNB, POL, POL_AMOY), deposit URLs, and single-use deposit page tokens."
   - name: Payouts
     description: Withdrawals with configurable fees (`WithdrawalFeeService`),
       balance reservation, and payout processing.
@@ -292,8 +291,8 @@ paths:
 
 
         **Query (both optional):** `currency` — `USDT` | `USDC`; `network` —
-        `TRX`, `ETH`, `BNB`, `POL`, `SOL` (testnets: `TRX_SHASTA`, `SEP`,
-        `tBNB`, `POL_AMOY`, `SOL_DEVNET`).
+        `TRX`, `ETH`, `BNB`, `POL`, `SOL` (testnets: `TRX_NILE`, `SEP`, `tBNB`,
+        `POL_AMOY`, `SOL_DEVNET`).
 
 
         **Response:**
@@ -508,7 +507,7 @@ paths:
 
 
         **Body (JSON):** `network` — one of `TRX`, `ETH`, `BNB`, `POL`, `SOL`
-        (testnets: `TRX_SHASTA`, `SEP`, `tBNB`, `POL_AMOY`, `SOL_DEVNET`);
+        (testnets: `TRX_NILE`, `SEP`, `tBNB`, `POL_AMOY`, `SOL_DEVNET`);
         `identifier` (required); `referenceId` (optional). Deposits are enabled
         per (currency, network) pair — see the Fees reference.
 
