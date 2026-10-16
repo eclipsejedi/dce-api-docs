@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
   title: DCE API
-  version: 1.1 (updated 2026-10-16)
+  version: 1.2 (updated 2026-10-16)
   description: >-
-    **Version 1.1** · **Last updated:** 2026-10-16 — see the
+    **Version 1.2** · **Last updated:** 2026-10-16 — see the
     [Changelog](https://docs.dcepay.io/docs/changelog) for what changed.
 
 

@@ -595,7 +595,7 @@ const data = await response.json();
 ```
 
 #### POST /api/deposit-address
-Create a new deposit address for customer deposits. Addresses are per network and receive any supported token on that chain; no address is issued for a network with no deposit-enabled pair (`400` — `Deposits on <network> are not currently supported`), and a network the platform does not currently serve answers `503` (`code: NETWORK_NOT_ENABLED`).
+Create a new deposit address for customer deposits. Addresses are per network and receive any supported token on that chain; no address is issued for a network with no deposit-enabled pair (`400` — `Deposits on <network> are not currently supported`), and a network the platform does not currently serve answers `400` (`code: NETWORK_NOT_ENABLED`).
 
 An **address activation fee** (fixed, charged once per address activation) may apply on the first deposit to a new address — see [Fees Reference](https://docs.dcepay.io/docs/fees-reference).
 
