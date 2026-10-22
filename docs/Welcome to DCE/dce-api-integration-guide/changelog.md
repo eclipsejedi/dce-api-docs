@@ -9,6 +9,12 @@ _Last updated: 2026-10-22_
 
 Dated record of merchant-visible API and platform changes. The API reference header always shows the current docs version and the date of the most recent API change; entries here explain what changed. Each published update raises the docs version (1.1, 1.2, …) and is tagged with it below; entries before v1.1 belong to version 1.0. Dates are UTC.
 
+## 2026-10-22 — v1.4
+
+- **API key revocation takes effect within 60 seconds** (previously 30). Keys are cached briefly by each API server; a rotated or revoked key may authenticate for up to a minute. Faster authentication on cache misses, especially for older keys. See [Authentication](https://docs.dcepay.io/docs/authentication-setup).
+- **Withdrawals respond faster; payout failures arrive by webhook.** `POST /api/withdrawals` now answers as soon as the amount and fees are reserved and the withdrawal is recorded — the same `200` body with `status: "PENDING"` — and sends the on-chain payout right after (previously the request waited several seconds for it). A payout that cannot be sent is reported with a `withdrawal.failed` webhook and `FAILED` status (full reserve returned, `referenceId` released) instead of a synchronous `500 Payout initiation failed`. See [API Reference — Withdrawals](https://docs.dcepay.io/docs/api-reference#withdrawals).
+- **Safe withdrawal retries.** Repeating an identical withdrawal request with the same `referenceId` (e.g. after a timeout) returns `200` with the original withdrawal and `"replayed": true` instead of `409`. A `referenceId` reused for a different request still returns `409`, now with the existing `withdrawalId`.
+
 ## 2026-10-22 — v1.3
 
 - **Reseller API: provider-neutral field names.** Reseller endpoints now also return `providerShare` on each fee split (`GET /api/resellers/{resellerId}/deposits`, `/withdrawals`), `depositRateBreakdown.providerBase` (`GET /api/resellers/{resellerId}/merchants`), and `providerDepositBaseRate` / `providerBaseFees` on reseller objects — the chain providers' base cost. The legacy field names remain alongside them with identical values, so existing integrations keep working; prefer the `provider*` fields in new code. Request bodies are unchanged.

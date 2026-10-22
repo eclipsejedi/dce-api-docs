@@ -484,14 +484,17 @@ Create a new withdrawal request (on-chain payout). Requires an API key with writ
 }
 ```
 
+**Processing:** the response comes back as soon as `amount + fees` is reserved and the withdrawal is recorded (`status: "PENDING"`); the on-chain payout is sent right after. Its outcome reaches you as a `withdrawal.confirmed` or `withdrawal.failed` webhook and on `GET /api/withdrawals`. A failed payout returns the full reserve (amount + fees) to your balance and releases the `referenceId`.
+
 **Fees:** the total debited from your balance is `amount + max(commission, networkFee)`. The per-network `networkFee` is quoted at submission and locked in — you are charged the quoted fee even if the finalized on-chain cost differs — and acts as a floor under your commission; the reported `commission` is only the margin above it. See the [Fees Reference](https://docs.dcepay.io/docs/fees-reference) for the current schedule.
 
-**Idempotency via `referenceId`:** the `referenceId` is unique per merchant account. Reusing a `referenceId` never creates a second payout — the duplicate submission is rejected with `409`:
+**Idempotency via `referenceId`:** the `referenceId` is unique per merchant account and never creates a second payout. Retrying the **same request** (same `referenceId`, `amount`, `currency`, `network` and `destination`) — e.g. after a timeout — returns `200` with the original withdrawal, its current `status` and `"replayed": true`. Reusing the `referenceId` for a **different** request is rejected with `409`:
 
 ```json
 {
   "error": "Duplicate referenceId",
-  "message": "A withdrawal with this referenceId already exists for your merchant account. Use a new referenceId to submit a new withdrawal."
+  "message": "A withdrawal with this referenceId already exists for your merchant account with different parameters. Use a new referenceId to submit a new withdrawal.",
+  "withdrawalId": "wth_123"
 }
 ```
 
@@ -509,9 +512,8 @@ If a previous attempt with that `referenceId` ended in `FAILED` or `CANCELLED`, 
 | `400` | `Insufficient balance` (includes `available`, `requested`, `currency`, `network`, `feeInfo`) | Balance on that chain cannot cover `amount + fees`; funds on other networks cannot be used |
 | `403` | `Insufficient permissions to initiate a withdrawal` | Read-only API key |
 | `403` | `Merchant account is not active` | Suspended/inactive merchant (also applies to deposit-URL creation) |
-| `409` | `Duplicate referenceId` | `referenceId` already used by your merchant account |
+| `409` | `Duplicate referenceId` | `referenceId` already used by your merchant account for a different request (an identical retry returns the original with `200`) |
 | `503` | `Withdrawal temporarily unavailable` | Platform treasury liquidity guard — nothing is created and the `referenceId` is not burned; retry shortly |
-| `500` | `Payout initiation failed` | Payout submission failed after creation; the reserved amount is returned to your balance and the `referenceId` is released for retry |
 
 **Webhook correlation:** the `withdrawal.confirmed` / `withdrawal.failed` callback payloads carry **your** `referenceId` (not the internal withdrawal id), so you can correlate callbacks with the withdrawal you submitted.
 
@@ -536,8 +538,8 @@ const response = await fetch(`${process.env.DCE_BASE_URL}/api/withdrawals`, {
 if (!response.ok) {
   const errorData = await response.json();
   if (response.status === 409) {
-    // Duplicate referenceId — this payout was already submitted.
-    console.warn('Withdrawal already exists for referenceId:', errorData.message);
+    // referenceId already used for a different withdrawal.
+    console.warn('referenceId already used:', errorData.message);
   } else if (errorData.details) {
     console.error('Validation errors:', errorData.details);
   }

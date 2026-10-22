@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-10-21_
+_Last updated: 2026-10-22_
 
 The withdrawals API allows you to process payouts to customers and external addresses. This guide covers withdrawal creation, status tracking, balance validation, and best practices for managing withdrawal flows.
 
@@ -443,8 +443,7 @@ On failure the reserved amount (including fees) is returned to your balance and 
 | 401 | `Authentication required` | Missing or invalid API key |
 | 403 | `Insufficient permissions to initiate a withdrawal` | API key lacks write/payout capability |
 | 403 | `Merchant account is not active` | Your merchant account is suspended or inactive |
-| 409 | `Duplicate referenceId` | A withdrawal with this `referenceId` already exists for your merchant account |
-| 500 | `Payout initiation failed` | Payout could not be processed — the reserved amount has been returned to your balance |
+| 409 | `Duplicate referenceId` | This `referenceId` is already used by your merchant account for a different request (an identical retry returns the original withdrawal with `200`) |
 | 503 | `Withdrawal temporarily unavailable` | Withdrawals are temporarily unavailable — retry shortly or contact support |
 
 ### Example Error Responses
@@ -479,9 +478,12 @@ Duplicate `referenceId`:
 ```json
 {
   "error": "Duplicate referenceId",
-  "message": "A withdrawal with this referenceId already exists for your merchant account. Use a new referenceId to submit a new withdrawal."
+  "message": "A withdrawal with this referenceId already exists for your merchant account with different parameters. Use a new referenceId to submit a new withdrawal.",
+  "withdrawalId": "wth_123"
 }
 ```
+
+A payout that cannot be sent after the request was accepted is reported with a `withdrawal.failed` webhook (status `FAILED`); the reserved amount including fees is returned to your balance and the `referenceId` is released.
 
 See [Error Handling](https://docs.dcepay.io/docs/error-handling) for the full guide.
 
@@ -545,7 +547,8 @@ async function safeWithdrawal(currency, network, amount, destination, referenceI
 
 Pass your own `referenceId` in the request body to prevent duplicate payouts. The `referenceId` is unique per merchant:
 
-- Submitting the same `referenceId` twice returns `409 Duplicate referenceId` — a second payout is **never** created.
+- Retrying the **same request** with the same `referenceId` (same amount, currency, network, destination) returns `200` with the original withdrawal and `"replayed": true` — safe after a timeout. A second payout is **never** created.
+- Reusing a `referenceId` for a **different** request returns `409 Duplicate referenceId`.
 - If a withdrawal **fails**, its `referenceId` is automatically released so you can retry with the same reference.
 
 ```javascript
@@ -566,12 +569,13 @@ async function createWithdrawalIdempotent(currency, network, amount, destination
   });
 
   if (response.status === 409) {
-    // Already submitted — do NOT retry with a new referenceId unless you
-    // intend to create a second payout.
-    console.log(`Withdrawal for ${orderId} already exists`);
+    // This orderId was already used for a DIFFERENT withdrawal — do not
+    // retry with a new referenceId unless you intend a second payout.
+    console.log(`referenceId ${orderId} is taken by withdrawal ${(await response.json()).withdrawalId}`);
     return null;
   }
 
+  // 200 for a new withdrawal and for a retry of the same one ("replayed": true).
   return response.json();
 }
 ```

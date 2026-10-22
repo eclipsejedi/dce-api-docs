@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-10-16_
+_Last updated: 2026-10-22_
 
 DCE API errors use standard HTTP status codes and JSON bodies. This guide explains what to expect and how to handle failures safely.
 
@@ -43,16 +43,17 @@ Some routes add a human-readable `message` alongside `error`, and validation rou
 
 ### 409 — Duplicate referenceId (withdrawals)
 
-Your `referenceId` is unique per merchant account. Submitting a withdrawal with a `referenceId` that already exists returns `409` — a second payout is never created:
+Your `referenceId` is unique per merchant account and a second payout is never created for it. Retrying the same request (same `referenceId`, `amount`, `currency`, `network`, `destination`) returns `200` with the original withdrawal and `"replayed": true` — safe after a timeout. Reusing the `referenceId` for a different request returns `409`:
 
 ```json
 {
   "error": "Duplicate referenceId",
-  "message": "A withdrawal with this referenceId already exists for your merchant account. Use a new referenceId to submit a new withdrawal."
+  "message": "A withdrawal with this referenceId already exists for your merchant account with different parameters. Use a new referenceId to submit a new withdrawal.",
+  "withdrawalId": "cmdl8u2xq0001abcd1234efgh"
 }
 ```
 
-Treat this as "already submitted": look up the existing withdrawal rather than retrying. If a withdrawal **fails**, its `referenceId` is automatically released so the same reference can be retried.
+Treat this as "reference already taken": use a new `referenceId` for a new payout. If a withdrawal **fails**, its `referenceId` is automatically released so the same reference can be retried.
 
 ### 403 — Merchant account not active
 
@@ -122,17 +123,9 @@ Withdrawals may be temporarily paused platform-side. Nothing is created and your
 }
 ```
 
-### 500 — Payout initiation failed (funds returned)
+### Payout failed after acceptance (funds returned)
 
-If a payout cannot be submitted after the withdrawal was created, the reserved amount (including fees) is returned to your balance and the `referenceId` is released for retry:
-
-```json
-{
-  "error": "Payout initiation failed",
-  "message": "The withdrawal could not be processed. The reserved amount has been returned to your balance — please try again shortly or contact support.",
-  "withdrawalId": "cmdl8u2xq0001abcd1234efgh"
-}
-```
+`POST /api/withdrawals` answers once the withdrawal is recorded; the on-chain payout is sent right after. If it cannot be sent, you receive a `withdrawal.failed` webhook (and the withdrawal shows `FAILED`), the reserved amount including fees is returned to your balance, and the `referenceId` is released for retry. (Before v1.4 this case was a synchronous `500 Payout initiation failed`.)
 
 ### 400 — Validation errors
 

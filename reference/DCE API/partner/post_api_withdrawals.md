@@ -19,9 +19,20 @@ excerpt: >-
   (quoted at submission from the asset fee matrix).
 
 
-  **Idempotency:** `referenceId` is unique per merchant — resubmitting a used
-  reference returns **409** and never creates a second payout. A reference left
-  behind by a FAILED/CANCELLED attempt is released automatically.
+  **Payout:** the response is sent once the amount and fees are reserved and the
+  withdrawal is recorded (`status: "PENDING"`); the on-chain payout follows. A
+  payout that cannot be sent is reported by the `withdrawal.failed` webhook
+  (status `FAILED`, full reserve returned, `referenceId` released), not by this
+  response.
+
+
+  **Idempotency:** `referenceId` is unique per merchant and never creates a
+  second payout. Retrying the **same request** (same `referenceId`, `amount`,
+  `currency`, `network` and `destination`) returns **200** with the original
+  withdrawal, its current `status` and `"replayed": true`. Reusing the
+  `referenceId` for a **different** request returns **409** `Duplicate
+  referenceId` with the existing `withdrawalId`. A reference left behind by a
+  FAILED/CANCELLED attempt is released automatically.
 
 
   **Errors:** insufficient available balance (including fees) → **400** with

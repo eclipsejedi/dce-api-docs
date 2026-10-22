@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
   title: DCE API
-  version: 1.3 (updated 2026-10-22)
+  version: 1.4 (updated 2026-10-22)
   description: >-
-    **Version 1.3** · **Last updated:** 2026-10-22 — see the
+    **Version 1.4** · **Last updated:** 2026-10-22 — see the
     [Changelog](https://docs.dcepay.io/docs/changelog) for what changed.
 
 
@@ -765,10 +765,20 @@ paths:
         fee matrix).
 
 
-        **Idempotency:** `referenceId` is unique per merchant — resubmitting a
-        used reference returns **409** and never creates a second payout. A
-        reference left behind by a FAILED/CANCELLED attempt is released
-        automatically.
+        **Payout:** the response is sent once the amount and fees are reserved
+        and the withdrawal is recorded (`status: "PENDING"`); the on-chain
+        payout follows. A payout that cannot be sent is reported by the
+        `withdrawal.failed` webhook (status `FAILED`, full reserve returned,
+        `referenceId` released), not by this response.
+
+
+        **Idempotency:** `referenceId` is unique per merchant and never creates
+        a second payout. Retrying the **same request** (same `referenceId`,
+        `amount`, `currency`, `network` and `destination`) returns **200** with
+        the original withdrawal, its current `status` and `"replayed": true`.
+        Reusing the `referenceId` for a **different** request returns **409**
+        `Duplicate referenceId` with the existing `withdrawalId`. A reference
+        left behind by a FAILED/CANCELLED attempt is released automatically.
 
 
         **Errors:** insufficient available balance (including fees) → **400**
@@ -790,13 +800,81 @@ paths:
         - ApiKeyAuth: []
       responses:
         "200":
-          description: Success
+          description: "Withdrawal recorded and reserved; the payout is sent right after.
+            Also returned, with `replayed: true`, for an identical retry of a
+            `referenceId` already in use."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  withdrawalId:
+                    type: string
+                  status:
+                    type: string
+                    description: "`PENDING` on a new withdrawal (`PENDING_APPROVAL` for reseller
+                      payouts). A replay returns the current status."
+                    example: PENDING
+                  amount: &a1
+                    type: string
+                    description: Decimal amount as a string.
+                  currency:
+                    type: string
+                    example: USDT
+                  network:
+                    type: string
+                    example: TRX
+                  destination:
+                    type: string
+                  feeInfo:
+                    type: object
+                    properties:
+                      grossAmount: *a1
+                      netAmount: *a1
+                      totalFees: *a1
+                      feeBreakdown:
+                        type: object
+                        properties:
+                          baseFee: *a1
+                          markupRate:
+                            type: string
+                            nullable: true
+                          markupAmount: *a1
+                          networkFee: *a1
+                          totalFee: *a1
+                  replayed:
+                    type: boolean
+                    description: "Present and `true` only when this is an identical retry: the
+                      original withdrawal is returned and nothing new is
+                      created."
         "400":
           description: Bad request — validation error or business rule failure.
         "401":
           description: Unauthorized — missing or invalid API key.
         "403":
           description: Forbidden — insufficient permissions for this operation.
+        "409":
+          description: "`referenceId` already used by your merchant account for a
+            different request."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Duplicate referenceId
+                  message:
+                    type: string
+                  withdrawalId:
+                    type: string
+                    description: The existing withdrawal holding this `referenceId` (included when
+                      it can be resolved).
         "500":
           description: Internal server error
     get:

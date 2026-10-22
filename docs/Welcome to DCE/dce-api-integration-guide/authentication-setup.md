@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-10-21_
+_Last updated: 2026-10-22_
 
 The DCE API uses API-key authentication.
 
@@ -63,7 +63,7 @@ Typical causes:
 
 - Store API keys in a secret manager, not source code.
 - Use separate credentials for staging and production.
-- Rotate keys on a defined schedule and on any suspected exposure.
+- Rotate keys on a defined schedule and on any suspected exposure. A rotated or revoked key can keep authenticating for up to **60 seconds** while API servers refresh their key cache — switch your integration to the new key before revoking the old one.
 - Never call DCE directly from browser/mobile clients with merchant API keys.
 - Log request IDs/correlation IDs and status codes for support diagnostics.
 
