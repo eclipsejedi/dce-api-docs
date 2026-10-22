@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-10-16_
+_Last updated: 2026-10-21_
 
 The balance API exposes **per-(currency, network)** available and pending balances for the authenticated user. Balances are segmented by chain: a USDT balance on TRX is separate from a USDT balance on ETH, and funds deposited on one chain can only be withdrawn on that same chain — there is no cross-chain fungibility.
 
@@ -112,4 +112,4 @@ Per-row fields:
 
 - [Withdrawals](https://docs.dcepay.io/docs/withdrawals)
 - [Transactions](https://docs.dcepay.io/docs/transactions)
-- [Quick Start](https://docs.dcepay.io/docs/quickstart)
+- [Quick Start](https://docs.dcepay.io/docs/quick-start-guide)

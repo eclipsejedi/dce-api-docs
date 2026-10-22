@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-10-16_
+_Last updated: 2026-10-21_
 
 The deposits API allows you to accept customer payments by creating deposit addresses and tracking payment status. This guide covers all aspects of deposit management including address creation, URL generation, payment tracking, and how deposits are credited and charged.
 
@@ -142,7 +142,7 @@ except Exception as e:
 
 ### POST /api/deposit-url
 
-Create a shareable hosted payment URL for customers. A fresh deposit address is provisioned and wrapped in a short-lived session (15 minutes). See [Hosted deposit page](https://docs.dcepay.io/docs/hosted-payments) for the customer-facing flow and live payment status.
+Create a shareable hosted payment URL for customers. A fresh deposit address is provisioned and wrapped in a short-lived session (15 minutes). The customer opens the URL on DCE's hosted deposit page, which shows the address, a QR code and live payment status; no API key reaches the browser.
 
 Your merchant account must be **ACTIVE** — deposit address and deposit URL creation return **403** (`Merchant account is not active`) for suspended or inactive merchant profiles, matching the withdrawals API.
 
@@ -754,6 +754,7 @@ DCE_STAGING_WEBHOOK_SECRET=staging_webhook_secret_here
 - **Use HTTPS** for all API communications
 - **Store sensitive data** securely
 - **Monitor for suspicious activity**
+- **Screen who paid you** before you credit the customer or release goods. On TRON, `POST /api/compliance-checks` with the deposit's `depositId` checks its on-chain sender against sanctions, fraud and Tether-freeze deny-lists (1.00 per verdict) — see [TRON Address Compliance Checks](https://docs.dcepay.io/docs/compliance-checks). For a risk score on any live network, run `POST /api/aml-checks` on the sender address (`fromAddress` in the `deposit.confirmed` webhook; 1.50 per result) — see [AML Address Checks](https://docs.dcepay.io/docs/aml-checks).
 
 ---
 

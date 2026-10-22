@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-10-16_
+_Last updated: 2026-10-21_
 
 This guide gets you from credentials to a working DCE API integration quickly.
 
@@ -123,15 +123,18 @@ Before production:
 - Test deposits, withdrawals, and webhook delivery in staging
 - Confirm retry handling on webhook failures/timeouts
 - Verify monitoring for `401`, `403`, `429`, and `5xx` patterns
+- Decide your screening policy: which payout destinations and deposit senders you check with [AML Address Checks](https://docs.dcepay.io/docs/aml-checks) or [TRON Address Compliance Checks](https://docs.dcepay.io/docs/compliance-checks) before money moves
 
 ## Useful links
 
-- [Welcome & getting started](https://docs.dcepay.io/docs/welcome-and-getting-started)
-- [Authentication setup](https://docs.dcepay.io/docs/authentication)
+- [Welcome & getting started](https://docs.dcepay.io/docs/welcome-to-dce)
+- [Authentication setup](https://docs.dcepay.io/docs/authentication-setup)
 - [Webhooks](https://docs.dcepay.io/docs/webhooks)
 - [Error handling](https://docs.dcepay.io/docs/error-handling)
-- [Troubleshooting](https://docs.dcepay.io/docs/troubleshooting)
+- [Troubleshooting](https://docs.dcepay.io/docs/troubleshooting-guide)
 - [Security guide](https://docs.dcepay.io/docs/security-guide)
+- [AML Address Checks](https://docs.dcepay.io/docs/aml-checks)
+- [TRON Address Compliance Checks](https://docs.dcepay.io/docs/compliance-checks)
 
 ---
 

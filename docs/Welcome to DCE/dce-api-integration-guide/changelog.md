@@ -5,9 +5,17 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-10-16_
+_Last updated: 2026-10-22_
 
 Dated record of merchant-visible API and platform changes. The API reference header always shows the current docs version and the date of the most recent API change; entries here explain what changed. Each published update raises the docs version (1.1, 1.2, …) and is tagged with it below; entries before v1.1 belong to version 1.0. Dates are UTC.
+
+## 2026-10-22 — v1.3
+
+- **Reseller API: provider-neutral field names.** Reseller endpoints now also return `providerShare` on each fee split (`GET /api/resellers/{resellerId}/deposits`, `/withdrawals`), `depositRateBreakdown.providerBase` (`GET /api/resellers/{resellerId}/merchants`), and `providerDepositBaseRate` / `providerBaseFees` on reseller objects — the chain providers' base cost. The legacy field names remain alongside them with identical values, so existing integrations keep working; prefer the `provider*` fields in new code. Request bodies are unchanged.
+- Internal: the operator ingestion route `POST /api/webhook/event` (retired with `410` on 2026-09-07) has been removed and now returns `405`. The admin `GET` listing is unchanged. It was never a merchant endpoint.
+- **Screening guidance across the guides.** [Withdrawals](https://docs.dcepay.io/docs/withdrawals#1-address-validation), [Deposits](https://docs.dcepay.io/docs/deposits#4-security), the [Security Guide](https://docs.dcepay.io/docs/security-guide#7-screen-counterparties) and the Quick Start now show where to run [AML Address Checks](https://docs.dcepay.io/docs/aml-checks) (Elliptic risk score, `TRX`/`BNB`/`POL`, 1.50 per result) and [TRON Address Compliance Checks](https://docs.dcepay.io/docs/compliance-checks) (instant TRON deny-list verdict, 1.00 per verdict) — before a payout on the destination, after a deposit on its sender. No API change.
+- **Supported networks corrected on the welcome page.** It now lists what is live: USDT on TRON for deposits and withdrawals; USDT/USDC deposits on BNB Smart Chain and Polygon. No API change.
+- **Broken links fixed.** Links to the Quick Start, Welcome, Troubleshooting and Authentication pages, and to the hosted deposit page, pointed at addresses that returned "page not found". They now open the right pages.
 
 ## 2026-10-16 — v1.2
 

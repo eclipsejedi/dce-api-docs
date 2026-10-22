@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-10-16_
+_Last updated: 2026-10-22_
 
 This document provides a comprehensive reference for DCE API HTTP endpoints. Unless otherwise noted, routes require API key authentication.
 
@@ -1010,7 +1010,7 @@ DCE sends signed POST callbacks to your configured `webhookUrl` for events such 
 
 For payload shapes, signature verification, and retry behavior in full, see [Webhooks](https://docs.dcepay.io/docs/webhooks).
 
-**Note:** `POST /api/webhook/event` was an operator-only internal ingestion route and is retired (`410`) — it was never your merchant webhook URL. You configure `webhookUrl` on your merchant profile and receive outbound POSTs from DCE.
+**Note:** `POST /api/webhook/event` was an operator-only internal ingestion route; it was retired (`410`) on 2026-09-07 and removed on 2026-10-22 — it was never your merchant webhook URL. You configure `webhookUrl` on your merchant profile and receive outbound POSTs from DCE.
 
 **Example Webhook Handler:**
 ```javascript
@@ -1235,5 +1235,5 @@ When rate limits are exceeded, the API returns a `429 Too Many Requests` status 
 
 ---
 
-*For more information about specific features, see the [Authentication](https://docs.dcepay.io/docs/authentication), [Deposits](https://docs.dcepay.io/docs/deposits), [Withdrawals](https://docs.dcepay.io/docs/withdrawals), and [Webhooks](https://docs.dcepay.io/docs/webhooks) documentation.* 
+*For more information about specific features, see the [Authentication](https://docs.dcepay.io/docs/authentication-setup), [Deposits](https://docs.dcepay.io/docs/deposits), [Withdrawals](https://docs.dcepay.io/docs/withdrawals), and [Webhooks](https://docs.dcepay.io/docs/webhooks) documentation.* 
 Fee behavior is documented in [Fees Reference](https://docs.dcepay.io/docs/fees-reference).

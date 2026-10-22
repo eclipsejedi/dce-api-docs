@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-07-30_
+_Last updated: 2026-10-21_
 
 The DCE API uses API-key authentication.
 
@@ -69,7 +69,7 @@ Typical causes:
 
 ## Related docs
 
-- [Quick Start Guide](https://docs.dcepay.io/docs/quickstart)
+- [Quick Start Guide](https://docs.dcepay.io/docs/quick-start-guide)
 - [Security Guide](https://docs.dcepay.io/docs/security-guide)
 - [Error Handling](https://docs.dcepay.io/docs/error-handling)
 

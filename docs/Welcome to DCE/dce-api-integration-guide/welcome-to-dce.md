@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-07-30_
+_Last updated: 2026-10-21_
 
 DCE is a cryptocurrency payments and financial services platform. The **DCE API** lets you accept deposits, manage withdrawals, query balances and transaction history, use hosted deposit flows, and receive **webhooks** when money movement and ledger events occur—all over a straightforward JSON HTTP API.
 
@@ -19,12 +19,13 @@ This page is the front door: what the product is, how to start integrating, wher
 - **Withdrawals (payouts)** — Create and track per-network withdrawals with configurable fees and balance checks.
 - **Balances & transactions** — Read per-(currency, network) balances and a unified transaction history.
 - **Exchange rates** — Fetch rates for display or reconciliation.
+- **AML & compliance screening** — Screen a wallet before you pay it or after it pays you: an Elliptic risk score and sanctions exposure on TRX, BNB and POL ([AML Address Checks](https://docs.dcepay.io/docs/aml-checks)), or an instant deny-list verdict for a TRON address ([TRON Address Compliance Checks](https://docs.dcepay.io/docs/compliance-checks)).
 - **Settlements & reconciliation** — Work with settlement workflows and reporting where your account allows it.
 - **Webhooks** — Receive signed POST callbacks to your HTTPS URL for deposit, withdrawal, and transaction lifecycle events.
 
 All merchant routes live under `/api`. Authenticate with your API key in the `Authorization` header (raw key is supported; a `Bearer` prefix is optional for compatibility). Treat keys as **server-side secrets** only.
 
-**Supported assets:** the platform works with stablecoins (`USDT`, `USDC`) per network (`TRX`, `ETH`, `BNB`, `SOL`). **USDT on TRX is what is available today** for deposits and withdrawals; the other pairs are coming soon and can be enabled on request. Balances are segmented per (currency, network) — funds on one chain cannot be withdrawn on another.
+**Supported assets:** the platform works with stablecoins (`USDT`, `USDC`) per network. **Available today:** USDT on TRON (`TRX`) for deposits and withdrawals; USDT and USDC deposits on BNB Smart Chain (`BNB`) and Polygon (`POL`), with withdrawals on those networks to follow. Ethereum (`ETH`) is next. Balances are segmented per (currency, network) — funds on one chain cannot be withdrawn on another. See [Deposits](https://docs.dcepay.io/docs/deposits#supported-currencies-and-networks) for the current list.
 
 ---
 
@@ -44,8 +45,8 @@ Use staging for development and integration testing when your account includes a
 ## Getting started (short path)
 
 1. **Get access** — Your DCE contact invites you to the merchant dashboard. Under **Account → Integration** you generate your API key and, if you use webhooks, a **webhook signing secret**; each is shown once, so store it when it appears. Webhooks also need a publicly reachable **HTTPS** URL (ngrok or similar is fine for development).
-2. **Read authentication** — See [Authentication Setup](https://docs.dcepay.io/docs/authentication) and [Merchant Authentication Guide](https://docs.dcepay.io/docs/merchant-authentication-guide) for headers, scopes, and safe handling of keys.
-3. **Follow the quick start** — [Quick Start Guide](https://docs.dcepay.io/docs/quickstart) walks through environment setup, first requests, and common patterns.
+2. **Read authentication** — See [Authentication Setup](https://docs.dcepay.io/docs/authentication-setup) and [Merchant Authentication Guide](https://docs.dcepay.io/docs/merchant-authentication-guide) for headers, scopes, and safe handling of keys.
+3. **Follow the quick start** — [Quick Start Guide](https://docs.dcepay.io/docs/quick-start-guide) walks through environment setup, first requests, and common patterns.
 4. **Turn on webhooks** — Save your `webhookUrl` and generate a signing secret in the dashboard, then implement signature verification. Start with [Webhooks](https://docs.dcepay.io/docs/webhooks) (especially *How the system delivers webhooks*).
 5. **Validate in staging** — Exercise deposits, withdrawals, and webhook delivery against staging before going live.
 
@@ -82,11 +83,12 @@ We do not publish API keys or secrets over email. Use secure channels your accou
 
 ## Related documentation
 
-- [Quick Start Guide](https://docs.dcepay.io/docs/quickstart)
-- [Authentication Setup](https://docs.dcepay.io/docs/authentication)
+- [Quick Start Guide](https://docs.dcepay.io/docs/quick-start-guide)
+- [Authentication Setup](https://docs.dcepay.io/docs/authentication-setup)
 - [Webhooks](https://docs.dcepay.io/docs/webhooks)
-- [Error Handling](https://docs.dcepay.io/docs/error-handling) & [Troubleshooting](https://docs.dcepay.io/docs/troubleshooting)
+- [Error Handling](https://docs.dcepay.io/docs/error-handling) & [Troubleshooting](https://docs.dcepay.io/docs/troubleshooting-guide)
 - [Security Guide](https://docs.dcepay.io/docs/security-guide)
+- [AML Address Checks](https://docs.dcepay.io/docs/aml-checks) & [TRON Address Compliance Checks](https://docs.dcepay.io/docs/compliance-checks)
 
 If you are browsing this repository as a developer, the rest of the guides live in the [`docs/`](https://docs.dcepay.io/docs/dce-api-integration-guide) directory alongside this file.
 

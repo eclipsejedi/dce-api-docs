@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
   title: DCE API
-  version: 1.2 (updated 2026-10-16)
+  version: 1.3 (updated 2026-10-22)
   description: >-
-    **Version 1.2** · **Last updated:** 2026-10-16 — see the
+    **Version 1.3** · **Last updated:** 2026-10-22 — see the
     [Changelog](https://docs.dcepay.io/docs/changelog) for what changed.
 
 
@@ -71,10 +71,11 @@ info:
     background job.
 
 
-    **Internal vs merchant URL:** `POST /api/webhook/event` is **admin-only**
-    system ingestion (signed with `WEBHOOK_SECRET`); it is **not** the endpoint
-    merchants expose. Separate chain-provider callbacks exist under other
-    `/api/webhook/*` routes and are not part of the merchant integration.
+    **Internal vs merchant URL:** `GET /api/webhook/event` is an **admin-only**
+    listing of webhook logs; it is **not** the endpoint merchants expose (the
+    former internal `POST` ingestion route was removed 2026-10-22).
+    Chain-provider callbacks arrive on other `/api/webhook/*` routes and are not
+    part of the merchant integration.
 
 
     **This export:** partner/merchant routes only (suitable for public ReadMe).
@@ -123,9 +124,9 @@ tags:
   - name: Merchants
     description: Merchant fee config and settlement addresses.
   - name: Webhooks
-    description: Operator listing and ingestion at `/api/webhook/event` (admin API
-      key + signed payload). Merchant-facing delivery is **outbound** HTTP POSTs
-      to the merchant `webhookUrl`; see API intro **Merchant webhooks** section.
+    description: Operator listing of webhook logs at `/api/webhook/event` (admin API
+      key). Merchant-facing delivery is **outbound** HTTP POSTs to the merchant
+      `webhookUrl`; see API intro **Merchant webhooks** section.
   - name: Admin
     description: System settings and background job administration.
 components:

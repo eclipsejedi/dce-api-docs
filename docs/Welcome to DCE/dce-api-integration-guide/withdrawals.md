@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-10-16_
+_Last updated: 2026-10-21_
 
 The withdrawals API allows you to process payouts to customers and external addresses. This guide covers withdrawal creation, status tracking, balance validation, and best practices for managing withdrawal flows.
 
@@ -512,6 +512,11 @@ function validateAddress(network, address) {
 }
 ```
 
+A well-formed address is not necessarily a safe one to pay. Before a payout, screen the destination:
+
+- **TRON:** `POST /api/compliance-checks` with `{ "address": "T…" }` returns an instant verdict. Don't send when `verdict.blocked` is `true` — `aml_risk` (sanctions or fraud labels), `usdt_frozen` (USDT sent there is frozen by Tether and cannot be recovered) or `smart_contract`. 1.00 per verdict; see [TRON Address Compliance Checks](https://docs.dcepay.io/docs/compliance-checks).
+- **Any live network:** `POST /api/aml-checks` returns an Elliptic risk score (0–10), risk level and sanctions exposure for `TRX`, `BNB` and `POL` addresses. 1.50 per result, free when no result is delivered; see [AML Address Checks](https://docs.dcepay.io/docs/aml-checks).
+
 ### 2. Balance Checking
 
 Always check the per-chain balance (including fees) before withdrawal:
@@ -700,3 +705,4 @@ Now that you understand withdrawals, explore:
 1. [Balance Management](https://docs.dcepay.io/docs/balance-management) - Monitor your per-chain account balances
 2. [Transactions](https://docs.dcepay.io/docs/transactions) - Track withdrawal lifecycle and statuses
 3. [Webhooks](https://docs.dcepay.io/docs/webhooks) - Handle withdrawal notifications
+4. [TRON Address Compliance Checks](https://docs.dcepay.io/docs/compliance-checks) - Screen a TRON payout destination before you send

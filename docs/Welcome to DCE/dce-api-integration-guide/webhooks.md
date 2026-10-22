@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-09-11_
+_Last updated: 2026-10-22_
 
 This guide covers only merchant-facing webhooks sent by DCE for deposit and withdrawal notifications.
 
@@ -224,9 +224,9 @@ There are three different paths; only the first one is the merchant integration 
 
 **Event names in code** (not `payout.*`): `deposit.confirmed` | `deposit.failed`; `withdrawal.confirmed` | `withdrawal.failed`; `transaction.confirmed` | `transaction.failed`. Pending states (`deposit.pending`, `withdrawal.pending`) exist internally but do not currently produce outbound merchant deliveries.
 
-### 2. Internal ingestion — `POST /api/webhook/event` (retired 2026-09-07)
+### 2. Internal ingestion — `POST /api/webhook/event` (removed 2026-10-22)
 
-This operator-only route received callbacks from the retired legacy provider and now answers `410 Gone`. It was never the URL you publish as a merchant; provider callbacks arrive on the chain-provider routes in (3).
+This operator-only route received callbacks from the retired legacy provider. It answered `410 Gone` from 2026-09-07 and was removed on 2026-10-22 (`POST` now returns `405`; the admin `GET` listing of webhook logs remains). It was never the URL you publish as a merchant; provider callbacks arrive on the chain-provider routes in (3).
 
 ### 3. Chain-provider callbacks
 
@@ -236,7 +236,7 @@ Additional routes under **`/api/webhook/*`** (for example chain adapters) handle
 
 **Outbound webhooks (merchant integration):** DCE POSTs JSON to your configured `webhookUrl` when deposits, withdrawals, or ledger transactions change state. The **canonical** description (headers, `X-Webhook-Signature`, retries, subscription filters) is in **How the system delivers webhooks** at the top of this page.
 
-**Inbound operator route:** `POST /api/webhook/event` is retired (`410`). It was never the URL you publish as a merchant.
+**Inbound operator route:** `POST /api/webhook/event` was removed on 2026-10-22 (retired with `410` since 2026-09-07). It was never the URL you publish as a merchant.
 
 **Settlement notifications:** Outbound webhook event names in code are **`deposit.*`**, **`withdrawal.*`**, and **`transaction.*`**. Do not assume `settlement.*` events are emitted on the same merchant webhook channel unless your account team explicitly confirms it—use the Settlements API for settlement state when in doubt.
 
@@ -264,28 +264,9 @@ Your HTTPS endpoint should:
 
 The event name travels in the **`X-Webhook-Event`** header. Payloads carry a `type` field (`deposit` | `withdrawal` | `transaction`), a `status` field, a stable `eventId`, plus business fields (see the sample payloads earlier on this page). Do not rely on a generic `{ data, metadata }` envelope unless you normalize it yourself—integrate against the header event name and the documented fields.
 
-## Internal: `POST /api/webhook/event` (retired)
+## Internal: `POST /api/webhook/event` (removed)
 
-**Status:** retired on 2026-09-07 — answers `410 Gone`. The description below is kept for historical reference only.
-
-**Purpose (historical):** ingest upstream/system events for processing by `WebhookHandler` (operator tooling; **not** the merchant callback URL).
-
-**Auth:** API key with `admin:write`, plus server `WEBHOOK_SECRET`.
-
-**Headers:**
-
-- `Content-Type: application/json`
-- `x-signature` — hex HMAC-SHA256 of the canonical JSON (parsed then **recursively key-sorted**—see server verification)
-- `x-timestamp` — Unix time in milliseconds (±5 minutes)
-
-**Success response (typical):**
-
-```json
-{
-  "success": true,
-  "message": "Webhook processed successfully"
-}
-```
+**Status:** retired on 2026-09-07 (`410 Gone`) and removed on 2026-10-22 — `POST` now returns `405`. It was operator tooling for the retired legacy provider, never the merchant callback URL. `GET /api/webhook/event` (admin listing of webhook logs) is unchanged.
 
 ## Signature Verification
 

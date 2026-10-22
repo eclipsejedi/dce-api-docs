@@ -5,7 +5,7 @@ hidden: false
 metadata:
   robots: index
 ---
-_Last updated: 2026-04-22_
+_Last updated: 2026-10-21_
 
 This guide describes baseline security controls for integrating with DCE API.
 
@@ -59,7 +59,17 @@ If compromise is suspected:
 4. Reprocess failed financial events safely with idempotency checks.
 5. Contact DCE support for coordinated investigation.
 
-## 7) Security contact
+## 7) Screen counterparties
+
+Check who you pay and who pays you, and record the result with the transaction:
+
+- **Before a payout:** screen the destination address. On TRON, [TRON Address Compliance Checks](https://docs.dcepay.io/docs/compliance-checks) return an instant deny-list verdict (sanctions, fraud labels, Tether USDT freezes, contracts) for 1.00 per verdict.
+- **After a deposit:** screen the sender before you credit the customer or release goods. A compliance check with `depositId` screens that deposit's on-chain sender. Funds that have already arrived cannot be refused, so hold them for review rather than returning them to a flagged address yourself.
+- **For a risk score:** [AML Address Checks](https://docs.dcepay.io/docs/aml-checks) return an Elliptic risk score (0–10), risk level and sanctions exposure on `TRX`, `BNB` and `POL` for 1.50 per delivered result.
+
+Set your own policy (for example, hold `high` risk or `blocked: true` for manual review). DCE returns the data; the decision is yours.
+
+## 8) Security contact
 
 Report security concerns to [hello@dcepay.io](mailto:hello@dcepay.io) with subject line `Security`.
 
